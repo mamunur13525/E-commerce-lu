@@ -1,0 +1,6 @@
+{
+  "name": "Lumina Modern E-Commerce",
+  "description": "Minimalist, high-performance e-commerce platform featuring seasonal collections, interactive sticky categories, guest & profile checkout, reviews, order tracking, and full admin management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

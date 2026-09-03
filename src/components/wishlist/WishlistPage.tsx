@@ -12,11 +12,13 @@ import { formatCurrency } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
+import { ProductGridSkeleton } from '../product/ProductCardSkeleton';
 
 export const WishlistPage: React.FC = () => {
   const { 
     wishlist, 
     products, 
+    isLoadingProducts,
     toggleWishlist, 
     addToCart, 
     setQuickViewProduct, 
@@ -38,6 +40,20 @@ export const WishlistPage: React.FC = () => {
       addToast('Added to bag!', `Moved ${count} wishlist items to your shopping bag.`);
     }
   };
+
+  if (isLoadingProducts) {
+    return (
+      <div className="bg-[#fdfdfd] min-h-screen py-8 sm:py-12 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 pb-6 border-b border-slate-100">
+            <div className="h-4 w-32 bg-slate-200 rounded animate-pulse mb-2" />
+            <div className="h-8 w-48 bg-slate-300 rounded animate-pulse" />
+          </div>
+          <ProductGridSkeleton count={4} columnsClass="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" />
+        </div>
+      </div>
+    );
+  }
 
   if (wishlistProducts.length === 0) {
     return (
@@ -100,7 +116,7 @@ export const WishlistPage: React.FC = () => {
         </div>
 
         {/* Wishlist Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {wishlistProducts.map(product => (
             <Card
               key={product.id}

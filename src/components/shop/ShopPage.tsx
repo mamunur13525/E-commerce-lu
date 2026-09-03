@@ -17,10 +17,14 @@ import { formatCurrency } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
+import { Switch } from '../ui/switch';
+import { ProductCard } from '../product/ProductCard';
+import { ProductGridSkeleton, ProductListSkeleton } from '../product/ProductCardSkeleton';
 
 export const ShopPage: React.FC = () => {
   const { 
     products, 
+    isLoadingProducts,
     categories, 
     addToCart, 
     toggleWishlist, 
@@ -426,17 +430,18 @@ export const ShopPage: React.FC = () => {
               />
             </div>
 
-            {/* In Stock Only Checkbox */}
+            {/* In Stock Only Switch */}
             <div className="pt-4 border-t border-slate-100">
-              <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                <input
-                  type="checkbox"
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="shop-instock-switch" className="text-xs font-semibold text-slate-800 cursor-pointer select-none">
+                  In Stock Ready to Ship
+                </label>
+                <Switch
+                  id="shop-instock-switch"
                   checked={filters.inStockOnly}
-                  onChange={e => setFilters(prev => ({ ...prev, inStockOnly: e.target.checked }))}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 accent-slate-900 w-3.5 h-3.5"
+                  onCheckedChange={checked => setFilters(prev => ({ ...prev, inStockOnly: checked }))}
                 />
-                <span>In Stock Ready to Ship</span>
-              </label>
+              </div>
             </div>
 
             {/* Color Swatches Filter */}
@@ -496,7 +501,13 @@ export const ShopPage: React.FC = () => {
 
           {/* Product Grid Area */}
           <main className="flex-1 min-w-0">
-            {displayedProducts.length === 0 ? (
+            {isLoadingProducts ? (
+              viewMode === 'grid' ? (
+                <ProductGridSkeleton count={8} columnsClass="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" />
+              ) : (
+                <ProductListSkeleton count={4} />
+              )
+            ) : displayedProducts.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center max-w-lg mx-auto my-12">
                 <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 mx-auto mb-4 border border-slate-100">
                   <Search className="w-6 h-6" />
@@ -514,117 +525,19 @@ export const ShopPage: React.FC = () => {
               </div>
             ) : viewMode === 'grid' ? (
               /* Grid View */
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {displayedProducts.map(product => {
-                  const isFavorited = isInWishlist(product.id);
-
-                  return (
-                    <div
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {displayedProducts.map(product => (
+                    <ProductCard
                       key={product.id}
+                      product={product}
                       id={`shop-grid-card-${product.id}`}
-                      className="group bg-white rounded-2xl border border-slate-100 p-4 flex flex-col justify-between hover:border-slate-300 transition-all duration-300"
-                    >
-                      {/* Image Frame */}
-                      <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer"
-                          onClick={() => navigateTo('product-detail', { productId: product.id })}
-                        />
-
-                        {/* Top Badges */}
-                        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
-                          {product.isBestSeller && (
-                            <Badge className="bg-slate-900 text-white text-[8px] font-bold uppercase tracking-wider rounded-full">
-                              Bestseller
-                            </Badge>
-                          )}
-                          {product.originalPrice && (
-                            <Badge className="bg-slate-900 text-white text-[8px] font-bold uppercase rounded-full">
-                              Save {formatCurrency(product.originalPrice - product.price)}
-                            </Badge>
-                          )}
-                        </div>
-
-                        {/* Wishlist Button */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleWishlist(product.id)}
-                          className={`absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full border transition-all p-0 ${
-                            isFavorited
-                              ? 'bg-rose-50 border-rose-200 text-rose-600'
-                              : 'bg-white/90 border-slate-200 hover:bg-slate-900 hover:text-white text-slate-600'
-                          }`}
-                          aria-label="Wishlist"
-                        >
-                          <Heart className={`w-3.5 h-3.5 ${isFavorited ? 'fill-rose-600' : ''}`} />
-                        </Button>
-
-                        {/* Quick View Button */}
-                        <div className="absolute inset-x-2.5 bottom-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
-                          <Button
-                            variant="secondary"
-                            onClick={() => setQuickViewProduct(product)}
-                            className="w-full bg-white hover:bg-slate-900 hover:text-white text-slate-900 font-bold text-[11px] uppercase tracking-wider border border-slate-200 gap-1.5 h-8"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Quick View</span>
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Product Content */}
-                      <div className="pt-3.5 flex flex-col justify-between flex-1">
-                        <div>
-                          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{product.category}</span>
-                            <div className="flex items-center gap-1 text-slate-700 font-semibold text-[11px]">
-                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                              <span>{product.rating}</span>
-                              <span className="text-slate-400 font-normal">({product.reviewCount})</span>
-                            </div>
-                          </div>
-
-                          <h3
-                            onClick={() => navigateTo('product-detail', { productId: product.id })}
-                            className="text-sm font-bold text-slate-900 hover:text-slate-600 cursor-pointer line-clamp-1 transition-colors"
-                          >
-                            {product.name}
-                          </h3>
-
-                          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5 font-normal">
-                            {product.description}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                          <div className="font-mono">
-                            <span className="text-sm font-bold text-slate-900">
-                              {formatCurrency(product.price)}
-                            </span>
-                            {product.originalPrice && (
-                              <span className="text-xs text-slate-400 line-through ml-1.5">
-                                {formatCurrency(product.originalPrice)}
-                              </span>
-                            )}
-                          </div>
-
-                          <Button
-                            size="sm"
-                            onClick={() => addToCart(product, 1)}
-                            disabled={!product.inStock}
-                            className="text-xs font-bold uppercase tracking-wider gap-1 h-7 px-3"
-                          >
-                            <ShoppingBag className="w-3 h-3" />
-                            <span>Add</span>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                    />
+                  ))}
+                </div>
+                {isLoadingMore && (
+                  <ProductGridSkeleton count={4} columnsClass="grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" className="mt-4" />
+                )}
               </div>
             ) : (
               /* List View */
@@ -659,7 +572,7 @@ export const ShopPage: React.FC = () => {
                         </h3>
 
                         <p className="text-xs text-slate-500 mt-1.5 leading-relaxed line-clamp-2">
-                          {product.detailedDescription || product.description}
+                          {(product.detailedDescription || product.description).replace(/<[^>]*>?/gm, ' ')}
                         </p>
 
                         <div className="flex flex-wrap gap-1 mt-2.5">
@@ -706,6 +619,9 @@ export const ShopPage: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {isLoadingMore && (
+                  <ProductListSkeleton count={2} className="mt-3" />
+                )}
               </div>
             )}
 

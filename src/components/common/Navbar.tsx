@@ -14,7 +14,8 @@ import {
   Truck,
   Layers,
   SlidersHorizontal,
-  Compass
+  Compass,
+  Phone
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -43,6 +44,10 @@ export const Navbar: React.FC = () => {
     userProfile,
     isGuestMode,
     setIsGuestMode,
+    setIsLoginModalOpen,
+    logoutUser,
+    lastLoginTime,
+    lastLogoutTime,
     setFilters
   } = useStore();
 
@@ -50,6 +55,8 @@ export const Navbar: React.FC = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  const [isAnnouncementVisible, setIsAnnouncementVisible] = useState(true);
 
   // Close search on outside click
   useEffect(() => {
@@ -89,77 +96,65 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs transition-all">
+    <>
       {/* Announcement Bar */}
-      {storeSettings.showAnnouncement && (
-        <div className="bg-slate-900 text-slate-100 text-xs py-2 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+      {storeSettings.showAnnouncement && isAnnouncementVisible && (
+        <div className="bg-slate-950 text-slate-200 text-[11px] sm:text-xs text-center font-normal tracking-wider py-2 px-4 flex items-center justify-center gap-2 relative">
           <span>{storeSettings.announcementText}</span>
-          <span className="hidden sm:inline-block text-slate-500">|</span>
           <button 
-            onClick={() => {
-              setFilters(prev => ({ ...prev, category: 'all' }));
-              navigateTo('shop');
-            }}
-            className="hidden sm:inline-flex items-center gap-1 underline underline-offset-2 hover:text-amber-200 transition-colors font-semibold"
+            onClick={() => setIsAnnouncementVisible(false)}
+            className="absolute right-2 sm:right-4 p-1 hover:bg-white/10 rounded-full transition-colors"
+            aria-label="Close announcement"
           >
-            Explore Catalog <ArrowUpRight className="w-3 h-3" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* Main Navbar: Centered Big Search Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-18 sm:h-20 gap-4 lg:gap-8">
-          
-          {/* Brand Logo (Left) */}
+      {/* Main Navbar: Centered Search Bar */}
+      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-18 sm:h-20 gap-4 lg:gap-8">
+            
+            {/* Brand Logo (Left) */}
           <button
             id="navbar-brand-logo"
             onClick={() => navigateTo('home')}
-            className="flex items-center gap-2.5 text-left group flex-shrink-0"
+            className="flex items-center gap-2 text-left group flex-shrink-0"
           >
-            <div className="w-9 h-9 rounded-xl bg-slate-950 text-white flex items-center justify-center font-black text-base tracking-tighter group-hover:scale-105 transition-transform shadow-xs">
+            <div className="w-8 h-8 rounded-lg bg-slate-950 text-white flex items-center justify-center font-bold text-sm tracking-tight shadow-xs">
               L
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-950">
-                LUMINA
-              </span>
-              <span className="text-[9px] tracking-[0.25em] uppercase text-slate-400 font-bold -mt-1">
-                DESIGN ARCHIVE
-              </span>
-            </div>
+            <span className="text-xl font-bold tracking-tight text-slate-950">
+              LUMINA
+            </span>
           </button>
 
-          {/* Big Center Search Box (Req 1) */}
+          {/* Big Center Search Box */}
           <div 
             ref={searchContainerRef} 
-            className="hidden md:flex flex-1 max-w-2xl relative mx-2 lg:mx-6"
+            className="hidden md:flex flex-1 max-w-xl relative mx-2 lg:mx-6"
           >
             <form onSubmit={handleSearchSubmit} className="w-full relative">
               <div className="relative flex items-center">
-                <Search className="w-5 h-5 text-slate-400 absolute left-4.5 pointer-events-none" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-4.5 pointer-events-none" />
                 <Input
                   id="navbar-big-search-input"
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
-                  placeholder="Search over 20+ artisan creations, cashmere, stoneware ceramics, leather..."
-                  className="w-full h-12 pl-12 pr-12 text-sm bg-slate-50/90 hover:bg-slate-100/70 border-slate-200/80 rounded-full transition-all focus-visible:bg-white focus-visible:border-slate-900 focus-visible:ring-2 focus-visible:ring-slate-950/10 placeholder:text-slate-400 font-medium"
+                  placeholder="Search collection..."
+                  className="w-full h-11 pl-11 pr-10 text-xs bg-slate-50/80 hover:bg-slate-100/60 border-slate-200/70 rounded-full transition-all focus-visible:bg-white focus-visible:border-slate-900 focus-visible:ring-1 focus-visible:ring-slate-900 placeholder:text-slate-400"
                 />
-                {searchQuery ? (
+                {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-4 text-slate-400 hover:text-slate-700 p-1 rounded-full hover:bg-slate-200 transition-colors"
+                    className="absolute right-3.5 text-slate-400 hover:text-slate-700 p-1 rounded-full hover:bg-slate-200 transition-colors"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
-                ) : (
-                  <div className="absolute right-4 hidden lg:flex items-center gap-1 text-[10px] uppercase font-bold text-slate-400 bg-slate-200/60 px-2 py-0.5 rounded-md pointer-events-none">
-                    <span>Enter ↵</span>
-                  </div>
                 )}
               </div>
             </form>
@@ -258,6 +253,8 @@ export const Navbar: React.FC = () => {
             >
               <Search className="w-5 h-5" />
             </Button>
+
+
 
             {/* Track Order Direct Button (Req 2) */}
             <Button
@@ -395,6 +392,40 @@ export const Navbar: React.FC = () => {
 
                 <DropdownMenuSeparator />
 
+                {/* Login / Auth Options */}
+                <div className="px-2 py-1.5 space-y-1 text-[11px] text-slate-500 bg-slate-50 rounded-xl my-1">
+                  <div className="flex justify-between">
+                    <span>Last Login:</span>
+                    <span className="font-mono text-slate-800">{lastLoginTime || 'Never'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Last Logout:</span>
+                    <span className="font-mono text-slate-800">{lastLogoutTime || 'None'}</span>
+                  </div>
+                </div>
+
+                <DropdownMenuItem
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="text-xs cursor-pointer flex items-center justify-between py-2 rounded-lg font-bold text-slate-900 bg-slate-100 hover:bg-slate-200"
+                >
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-slate-900" />
+                    <span>Sign In / Login</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={logoutUser}
+                  className="text-xs cursor-pointer flex items-center justify-between py-2 rounded-lg text-rose-600 hover:bg-rose-50"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>Log Out</span>
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
                 {/* Direct link to Standalone Admin Dashboard */}
                 <DropdownMenuItem 
                   onClick={() => navigateTo('admin')}
@@ -423,12 +454,13 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Search Expandable Bar */}
         {isMobileSearchOpen && (
-          <div className="md:hidden pb-4 pt-1">
+          <div className="md:hidden pb-4 pt-1" ref={searchContainerRef}>
             <form onSubmit={handleSearchSubmit} className="relative">
               <Input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
                 placeholder="Search products, cashmere, leather..."
                 className="w-full pl-10 pr-10 text-xs rounded-full bg-slate-50 border-slate-200"
                 autoFocus
@@ -444,10 +476,84 @@ export const Navbar: React.FC = () => {
                 </button>
               )}
             </form>
+
+            {/* Mobile Search Dropdown Results */}
+            {isSearchFocused && (
+              <div className="absolute left-0 right-0 mt-2 bg-white rounded-b-2xl shadow-xl border border-slate-100 p-3 z-50 animate-in fade-in-50">
+                {searchResults.length > 0 ? (
+                  <div>
+                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                      <span>Matching Products ({searchResults.length})</span>
+                    </div>
+                    <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
+                      {searchResults.map(prod => (
+                        <div
+                          key={prod.id}
+                          onClick={() => selectSearchResult(prod.id)}
+                          className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors"
+                        >
+                          <img
+                            src={prod.images[0]}
+                            alt={prod.name}
+                            className="w-10 h-10 object-cover rounded-md bg-slate-50 flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-bold text-slate-900 truncate">
+                              {prod.name}
+                            </p>
+                            <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                              <span className="font-semibold text-slate-950">{formatCurrency(prod.price)}</span>
+                            </p>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSearchSubmit}
+                      className="w-full mt-2 text-[11px] font-bold h-8"
+                    >
+                      View all results <ArrowUpRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
+                ) : searchQuery ? (
+                  <div className="py-6 text-center text-slate-500 text-[11px]">
+                    <p className="font-medium">No products match "{searchQuery}".</p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                      Popular Searches
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['Cashmere', 'Leather', 'Steel'].map(tag => (
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          onClick={() => {
+                            setSearchQuery(tag);
+                            setFilters(prev => ({ ...prev, searchQuery: tag }));
+                            navigateTo('shop', { query: tag });
+                            setIsSearchFocused(false);
+                            setIsMobileSearchOpen(false);
+                          }}
+                          className="cursor-pointer hover:bg-slate-950 hover:text-white transition-colors py-0.5 px-2 text-[10px]"
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
       </div>
     </header>
+    </>
   );
 };

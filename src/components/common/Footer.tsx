@@ -8,12 +8,18 @@ import {
   Instagram, 
   Facebook, 
   Twitter,
+  Youtube,
+  Share2,
+  Linkedin,
+  Mail,
+  Phone,
   ArrowUpRight
 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 
 export const Footer: React.FC = () => {
-  const { navigateTo, categories, setFilters } = useStore();
+  const { navigateTo, categories, setFilters, storeSettings } = useStore();
+  const { socialLinks, contactInfo } = storeSettings;
 
   return (
     <footer className="bg-slate-950 text-slate-300 pt-12 pb-16 border-t border-slate-900 transition-all">
@@ -26,7 +32,7 @@ export const Footer: React.FC = () => {
             </div>
             <div>
               <h5 className="text-xs font-bold text-white tracking-tight">Free Carbon-Neutral Delivery</h5>
-              <p className="text-[11px] text-slate-400 mt-0.5">On all orders over $150</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">On all orders over ${storeSettings.freeShippingThreshold || 150}</p>
             </div>
           </div>
 
@@ -79,6 +85,22 @@ export const Footer: React.FC = () => {
             <p className="text-xs text-slate-400 leading-relaxed max-w-xs">
               Minimalist artisan pieces, timeless wardrobe staples, and heirloom homeware designed for intentional everyday living.
             </p>
+
+            {/* Quick Contact snippet from Settings */}
+            <div className="pt-2 text-[11px] text-slate-400 space-y-1.5 border-t border-slate-900">
+              <p className="flex items-center gap-2">
+                <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <a href={`mailto:${contactInfo?.email || 'support@lumina.com'}`} className="hover:text-white transition-colors truncate">
+                  {contactInfo?.email || 'support@lumina.com'}
+                </a>
+              </p>
+              <p className="flex items-center gap-2">
+                <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <a href={`tel:${contactInfo?.phone || '+15552345678'}`} className="hover:text-white transition-colors">
+                  {contactInfo?.phone || '+1 (555) 234-5678'}
+                </a>
+              </p>
+            </div>
           </div>
 
           {/* Catalog Collections */}
@@ -120,6 +142,12 @@ export const Footer: React.FC = () => {
               Customer Portal
             </h6>
             <ul className="space-y-2 text-xs text-slate-400">
+              <li>
+                <button onClick={() => navigateTo('contact')} className="hover:text-white transition-colors flex items-center gap-1.5 font-medium text-slate-200">
+                  <span>Contact Concierge</span>
+                  <span className="text-[9px] bg-amber-400 text-slate-950 font-bold px-1.5 rounded-sm">Support</span>
+                </button>
+              </li>
               <li>
                 <button onClick={() => navigateTo('track-order')} className="hover:text-white transition-colors">
                   Track Order
@@ -165,7 +193,14 @@ export const Footer: React.FC = () => {
 
       {/* Bottom Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 border-t border-slate-900 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-        <p>© 2026 Lumina Studio Archive. All rights reserved.</p>
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+          <p>© 2026 Lumina Studio Archive. All rights reserved.</p>
+          <div className="flex items-center gap-3 text-[11px]">
+            <button onClick={() => navigateTo('contact')} className="hover:text-white transition-colors">Contact Us</button>
+            <button onClick={() => navigateTo('terms')} className="hover:text-white transition-colors">Terms</button>
+            <button onClick={() => navigateTo('privacy')} className="hover:text-white transition-colors">Privacy</button>
+          </div>
+        </div>
 
         {/* Payment Badges */}
         <div className="flex items-center gap-1.5 text-[9px] font-mono text-slate-400">
@@ -175,17 +210,92 @@ export const Footer: React.FC = () => {
           <Badge variant="outline" className="bg-slate-900 border-slate-800 text-slate-300">APPLE PAY</Badge>
         </div>
 
-        {/* Socials */}
+        {/* Dynamic Social Links from Admin Settings */}
         <div className="flex items-center gap-3 text-slate-400">
-          <a href="#" className="hover:text-white transition-colors" aria-label="Instagram">
-            <Instagram className="w-4 h-4" />
-          </a>
-          <a href="#" className="hover:text-white transition-colors" aria-label="Facebook">
-            <Facebook className="w-4 h-4" />
-          </a>
-          <a href="#" className="hover:text-white transition-colors" aria-label="Twitter">
-            <Twitter className="w-4 h-4" />
-          </a>
+          {socialLinks?.instagram && (
+            <a 
+              href={socialLinks.instagram} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-white transition-colors p-1" 
+              aria-label="Instagram"
+              title="Instagram"
+            >
+              <Instagram className="w-4 h-4" />
+            </a>
+          )}
+          {socialLinks?.facebook && (
+            <a 
+              href={socialLinks.facebook} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-white transition-colors p-1" 
+              aria-label="Facebook"
+              title="Facebook"
+            >
+              <Facebook className="w-4 h-4" />
+            </a>
+          )}
+          {socialLinks?.twitter && (
+            <a 
+              href={socialLinks.twitter} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-white transition-colors p-1" 
+              aria-label="Twitter"
+              title="Twitter / X"
+            >
+              <Twitter className="w-4 h-4" />
+            </a>
+          )}
+          {socialLinks?.youtube && (
+            <a 
+              href={socialLinks.youtube} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-white transition-colors p-1" 
+              aria-label="YouTube"
+              title="YouTube"
+            >
+              <Youtube className="w-4 h-4" />
+            </a>
+          )}
+          {socialLinks?.pinterest && (
+            <a 
+              href={socialLinks.pinterest} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-white transition-colors p-1" 
+              aria-label="Pinterest"
+              title="Pinterest"
+            >
+              <Share2 className="w-4 h-4" />
+            </a>
+          )}
+          {socialLinks?.tiktok && (
+            <a 
+              href={socialLinks.tiktok} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-white transition-colors p-1" 
+              aria-label="TikTok"
+              title="TikTok"
+            >
+              <Share2 className="w-4 h-4" />
+            </a>
+          )}
+          {socialLinks?.linkedin && (
+            <a 
+              href={socialLinks.linkedin} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:text-white transition-colors p-1" 
+              aria-label="LinkedIn"
+              title="LinkedIn"
+            >
+              <Linkedin className="w-4 h-4" />
+            </a>
+          )}
         </div>
       </div>
     </footer>

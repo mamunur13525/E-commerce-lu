@@ -28,30 +28,50 @@ import { Separator } from '../ui/separator';
 export const TrackOrderPage: React.FC = () => {
   const { orders, navigateTo, addToast } = useStore();
   const [trackingInput, setTrackingInput] = useState('');
-  const [searchedOrder, setSearchedOrder] = useState<Order | null>(
-    orders.length > 0 ? orders[0] : null
-  );
+  const [searchedOrder, setSearchedOrder] = useState<Order | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [copiedTracking, setCopiedTracking] = useState(false);
 
-  const handleTrackSubmit = (e: React.FormEvent) => {
+  const [isSearching, setIsSearching] = useState(false);
+
+  const handleTrackSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanQuery = trackingInput.trim().toUpperCase();
     if (!cleanQuery) return;
 
     setHasSearched(true);
-    const found = orders.find(
+    setIsSearching(true);
+
+    // First check in-memory store
+    const localFound = orders.find(
       o => o.orderNumber.toUpperCase() === cleanQuery ||
            o.trackingNumber.toUpperCase() === cleanQuery ||
            o.id.toUpperCase() === cleanQuery
     );
 
-    if (found) {
-      setSearchedOrder(found);
-      addToast('Order Located', `Found tracking records for ${found.orderNumber}.`, 'success');
-    } else {
+    if (localFound) {
+      setSearchedOrder(localFound);
+      setIsSearching(false);
+      addToast('Order Located', `Found tracking records for ${localFound.orderNumber}.`, 'success');
+      return;
+    }
+
+    // Direct database lookup
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(cleanQuery)}`);
+      if (res.ok) {
+        const orderFromDb: Order = await res.json();
+        setSearchedOrder(orderFromDb);
+        addToast('Order Located', `Found tracking records for ${orderFromDb.orderNumber} from database.`, 'success');
+      } else {
+        setSearchedOrder(null);
+        addToast('No Order Found', 'Please check the order or tracking number and try again.', 'error');
+      }
+    } catch {
       setSearchedOrder(null);
-      addToast('No Order Found', 'Please check the order or tracking number and try again.', 'error');
+      addToast('Search Error', 'Unable to retrieve order from server.', 'error');
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -117,28 +137,6 @@ export const TrackOrderPage: React.FC = () => {
               Track Package <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
           </form>
-
-          {/* Quick Click Sample Orders */}
-          {orders.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <span className="font-semibold text-slate-400 text-[11px] uppercase tracking-wider">Quick test orders:</span>
-              {orders.slice(0, 3).map(ord => (
-                <button
-                  key={ord.id}
-                  type="button"
-                  onClick={() => {
-                    setTrackingInput(ord.orderNumber);
-                    setSearchedOrder(ord);
-                    setHasSearched(true);
-                  }}
-                  className="font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors flex items-center gap-1"
-                >
-                  <span>{ord.orderNumber}</span>
-                  <Badge variant="outline" className="text-[9px] py-0 px-1 capitalize">{ord.status}</Badge>
-                </button>
-              ))}
-            </div>
-          )}
         </Card>
 
         {/* Tracking Details Display */}
@@ -146,99 +144,113 @@ export const TrackOrderPage: React.FC = () => {
           <div className="space-y-8 animate-in fade-in-50 duration-300">
             
             {/* Status Hero Card */}
-            <Card className="p-6 sm:p-8 bg-slate-950 text-white rounded-3xl shadow-2xl relative overflow-hidden border-0">
-              <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-              
-              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-800">
+            <Card className="p-0 bg-white rounded-3xl shadow-sm border-slate-200/60 overflow-hidden">
+              <div className="p-6 sm:p-8 flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${getStatusBadgeVariant(searchedOrder.status)}`}>
-                      ● {searchedOrder.status.replace('_', ' ')}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className={`px-2.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusBadgeVariant(searchedOrder.status)}`}>
+                      {searchedOrder.status.replace('_', ' ')}
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">
-                      Order #{searchedOrder.orderNumber}
+                    <span className="text-xs text-slate-500 font-medium">
+                      Order <span className="font-mono text-slate-900 font-bold">#{searchedOrder.orderNumber}</span>
                     </span>
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                    Estimated Delivery: {searchedOrder.estimatedDeliveryDate}
+                  
+                  <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-950 mb-2">
+                    {searchedOrder.status === 'delivered' ? 'Delivered on ' : 'Expected '} 
+                    <span className="text-amber-500">{searchedOrder.estimatedDeliveryDate}</span>
                   </h2>
-                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                    <span>Carrier: {searchedOrder.carrier}</span>
-                    <span>·</span>
-                    <span className="text-emerald-400 font-semibold">Carbon Neutral Transit</span>
-                  </p>
+                  
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 font-medium mt-4">
+                    <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                      <Truck className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{searchedOrder.carrier}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 text-emerald-700">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Carbon Neutral Transit</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl flex flex-col gap-1 min-w-[240px]">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Tracking Number</span>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-sm font-bold text-amber-300">{searchedOrder.trackingNumber}</span>
+                <div className="bg-slate-50 border border-slate-200/60 p-5 rounded-2xl flex flex-col gap-2 min-w-[260px]">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    Tracking Number
+                  </span>
+                  <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                    <span className="font-mono text-sm font-bold text-slate-900 tracking-wider">{searchedOrder.trackingNumber}</span>
                     <button
                       onClick={() => copyToClipboard(searchedOrder.trackingNumber)}
-                      className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                      className="p-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors"
                       title="Copy Tracking ID"
                     >
-                      {copiedTracking ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      {copiedTracking ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
               </div>
 
               {/* Progress Steps Timeline */}
-              <div className="pt-8">
-                <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">
-                  Milestone Progress
+              <div className="bg-slate-950 p-6 sm:p-8 text-white relative overflow-hidden">
+                <div className="absolute right-0 bottom-0 translate-x-12 translate-y-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-8 flex items-center gap-2 relative z-10">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  Live Journey Milestones
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-0 relative z-10">
                   {searchedOrder.trackingSteps.map((step, idx) => (
-                    <div key={idx} className="flex items-start gap-4 relative group">
+                    <div key={idx} className="flex items-start gap-6 relative group pb-8 last:pb-0">
                       {/* Timeline vertical connector */}
                       {idx < searchedOrder.trackingSteps.length - 1 && (
                         <div 
-                          className={`absolute left-4 top-7 bottom-0 w-0.5 -translate-x-1/2 ${
+                          className={`absolute left-3 top-8 bottom-0 w-0.5 -translate-x-1/2 rounded-full ${
                             step.completed ? 'bg-amber-400' : 'bg-slate-800'
                           }`} 
                         />
                       )}
 
                       {/* Icon Circle */}
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 font-bold text-xs ${
+                      <div className={`relative w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${
                         step.current 
-                          ? 'bg-amber-400 text-slate-950 ring-4 ring-amber-400/20 animate-pulse' 
+                          ? 'bg-amber-400 text-slate-950 ring-4 ring-amber-400/20' 
                           : step.completed 
                             ? 'bg-amber-400 text-slate-950' 
-                            : 'bg-slate-800 text-slate-500 border border-slate-700'
+                            : 'bg-slate-900 text-slate-500 border-2 border-slate-800'
                       }`}>
                         {step.completed ? (
-                          <CheckCircle2 className="w-4 h-4" />
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : step.current ? (
+                          <div className="w-2 h-2 rounded-full bg-slate-950 animate-pulse" />
                         ) : (
-                          <span>{idx + 1}</span>
+                          <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
                         )}
                       </div>
 
                       {/* Content */}
-                      <div className="flex-1 pb-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <div className="flex-1 bg-slate-900/50 rounded-2xl p-4 border border-slate-800/50 hover:bg-slate-900 transition-colors">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                           <h4 className={`text-sm font-bold ${
-                            step.current ? 'text-amber-300' : step.completed ? 'text-white' : 'text-slate-500'
+                            step.current ? 'text-amber-400' : step.completed ? 'text-white' : 'text-slate-500'
                           }`}>
                             {step.title}
                           </h4>
                           {step.date && (
-                            <span className="text-xs text-slate-400 font-mono">
-                              {step.date} · {step.time}
-                            </span>
+                            <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 bg-slate-950 px-2 py-1 rounded-lg">
+                              <Calendar className="w-3 h-3" />
+                              {step.date} <span className="text-slate-600">|</span> {step.time}
+                            </div>
                           )}
                         </div>
                         <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                           {step.description}
                         </p>
                         {step.location && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-amber-300/80 mt-1">
-                            <MapPin className="w-3 h-3" />
-                            <span>{step.location}</span>
-                          </div>
+                          <p className={`text-xs mt-2 flex items-center gap-1.5 ${step.current || step.completed ? 'text-slate-300' : 'text-slate-600'}`}>
+                            <MapPin className="w-3.5 h-3.5 opacity-70" />
+                            {step.location}
+                          </p>
                         )}
                       </div>
                     </div>

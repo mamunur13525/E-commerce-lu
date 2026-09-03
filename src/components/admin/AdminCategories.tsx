@@ -18,6 +18,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
+import { Switch } from '../ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 
 export const AdminCategories: React.FC = () => {
@@ -40,9 +41,9 @@ export const AdminCategories: React.FC = () => {
     setFormName('');
     setFormSlug('');
     setFormDescription('');
-    setFormImage('https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80');
+    setFormImage('');
     setFormFeatured(false);
-    setFormSubCollections('All, Essentials, New Releases');
+    setFormSubCollections('');
     setIsDrawerOpen(true);
   };
 
@@ -78,7 +79,6 @@ export const AdminCategories: React.FC = () => {
         featured: formFeatured,
         subCollections: subs,
       });
-      addToast('Category Updated', `${formName} department updated.`, 'success');
     } else {
       addCategory({
         name: formName.trim(),
@@ -90,7 +90,6 @@ export const AdminCategories: React.FC = () => {
         featured: formFeatured,
         subCollections: subs,
       });
-      addToast('Category Created', `${formName} category registered.`, 'success');
     }
 
     setIsDrawerOpen(false);
@@ -99,7 +98,6 @@ export const AdminCategories: React.FC = () => {
   const handleDelete = (id: string, name: string) => {
     if (confirm(`Are you sure you want to delete the category "${name}"?`)) {
       deleteCategory(id);
-      addToast('Category Deleted', `${name} removed.`, 'info');
     }
   };
 
@@ -358,15 +356,16 @@ export const AdminCategories: React.FC = () => {
               />
             </div>
 
-            <label className="flex items-center gap-2 text-xs font-bold cursor-pointer pt-1">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-3 pt-1">
+              <Switch
+                id="featured-category-switch"
                 checked={formFeatured}
-                onChange={e => setFormFeatured(e.target.checked)}
-                className="rounded"
+                onCheckedChange={setFormFeatured}
               />
-              <span>Show in Featured Navigation</span>
-            </label>
+              <label htmlFor="featured-category-switch" className="text-xs font-bold text-slate-800 cursor-pointer select-none">
+                Show in Featured Navigation
+              </label>
+            </div>
 
             <div className="pt-4 border-t border-slate-200 flex gap-2">
               <Button

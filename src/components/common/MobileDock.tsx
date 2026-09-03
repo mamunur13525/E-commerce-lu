@@ -23,7 +23,8 @@ export const MobileDock: React.FC = () => {
 
   const dockItems = [
     { id: 'home', label: 'Home', icon: Home, action: () => navigateTo('home') },
-    { id: 'shop', label: 'Shop', icon: Grid, action: () => navigateTo('shop') },
+    { id: 'categories', label: 'Explore', icon: Grid, action: () => navigateTo('categories') },
+    { id: 'shop', label: 'Shop', icon: ShoppingBag, action: () => navigateTo('shop') },
     { 
       id: 'cart', 
       label: 'Bag', 
@@ -39,62 +40,64 @@ export const MobileDock: React.FC = () => {
       action: () => navigateTo('wishlist') 
     },
     { id: 'orders', label: 'Orders', icon: PackageCheck, action: () => navigateTo('orders') },
-    { id: 'admin', label: 'Admin', icon: ShieldCheck, action: () => navigateTo('admin') },
   ];
 
   return (
-    <div className="fixed bottom-4 left-0 right-0 z-40 flex justify-center px-4 md:hidden pointer-events-none">
+    <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden w-full bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_16px_rgba(0,0,0,0.05)] pb-[max(0.25rem,env(safe-area-inset-bottom))]">
       <nav 
-        id="mobile-dock-nav"
-        className="pointer-events-auto flex items-center justify-between gap-1 bg-slate-950 text-white px-3 py-1.5 rounded-full shadow-2xl border border-slate-800 max-w-sm w-full"
+        id="mobile-bottom-nav"
+        className="grid grid-cols-6 items-center w-full px-1 py-1 max-w-lg mx-auto"
+        aria-label="Mobile Navigation"
       >
         {dockItems.map(item => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
 
           return (
-            <Button
+            <button
               key={item.id}
-              variant="ghost"
-              size="sm"
+              type="button"
               onClick={item.action}
-              id={`dock-item-${item.id}`}
-              className="relative flex flex-col items-center justify-center p-1.5 h-auto rounded-full hover:bg-white/10 text-white group"
+              id={`bottom-nav-item-${item.id}`}
+              className={`relative flex flex-col items-center justify-center py-1 px-0.5 min-h-[48px] rounded-xl transition-all duration-150 ${
+                isActive 
+                  ? 'text-slate-950 font-bold bg-slate-100/70' 
+                  : 'text-slate-500 hover:text-slate-900 active:bg-slate-50'
+              }`}
               aria-label={item.label}
             >
-              {/* Active pill background */}
+              {/* Active top accent indicator */}
               {isActive && (
                 <motion.div
-                  layoutId="dock-active-pill"
-                  className="absolute inset-0 bg-white/15 rounded-full"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  layoutId="bottom-nav-active-indicator"
+                  className="absolute -top-1 w-6 h-0.5 bg-slate-950 rounded-full"
+                  transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                 />
               )}
 
-              <div className="relative">
+              <div className="relative flex items-center justify-center">
                 <Icon 
-                  className={`w-4 h-4 transition-transform group-hover:scale-110 ${
-                    isActive ? 'text-white' : 'text-slate-400'
+                  className={`w-5 h-5 transition-transform ${
+                    isActive ? 'scale-105 stroke-[2.5]' : 'stroke-[1.75]'
                   }`} 
                 />
                 
                 {/* Badge indicator */}
                 {item.badge !== undefined && item.badge > 0 ? (
-                  <Badge 
-                    variant="secondary"
-                    className="absolute -top-1.5 -right-2 bg-white text-slate-950 font-bold text-[8px] h-3.5 min-w-[14px] px-1 rounded-full flex items-center justify-center border border-slate-900"
+                  <span 
+                    className="absolute -top-1.5 -right-2 bg-slate-950 text-white font-bold text-[9px] h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center border border-white shadow-xs"
                   >
-                    {item.badge}
-                  </Badge>
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
                 ) : null}
               </div>
 
-              <span className={`text-[9px] mt-0.5 tracking-wider uppercase font-bold ${
-                isActive ? 'text-white' : 'text-slate-400'
+              <span className={`text-[10px] mt-1 tracking-tight leading-none ${
+                isActive ? 'font-bold text-slate-950' : 'font-medium text-slate-500'
               }`}>
                 {item.label}
               </span>
-            </Button>
+            </button>
           );
         })}
       </nav>

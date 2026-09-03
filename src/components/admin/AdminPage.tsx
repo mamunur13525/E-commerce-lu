@@ -59,12 +59,12 @@ export const AdminPage: React.FC = () => {
 
       {/* Mobile Drawer Sidebar */}
       {isMobileSidebarOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
+        <div className="fixed inset-0 z-[100] flex lg:hidden">
           <div 
             className="fixed inset-0 bg-black/60 backdrop-blur-xs" 
             onClick={() => setIsMobileSidebarOpen(false)} 
           />
-          <div className="relative z-10 w-72 h-full bg-slate-950">
+          <div className="relative z-10 w-56 h-full bg-slate-950 shadow-2xl">
             <AdminSidebar 
               activeTab={activeTab} 
               setActiveTab={(tab) => {

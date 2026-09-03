@@ -19,6 +19,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
+import { Switch } from '../ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 
 export const AdminCoupons: React.FC = () => {
@@ -38,12 +39,12 @@ export const AdminCoupons: React.FC = () => {
 
   const handleOpenAdd = () => {
     setEditingCoupon(null);
-    setFormCode('SAVE15');
-    setFormDiscount(15);
-    setFormMinSpend(50);
-    setFormExpiry('2026-12-31');
-    setFormUsageLimit(500);
-    setFormDescription('15% off all seasonal garments');
+    setFormCode('');
+    setFormDiscount(0);
+    setFormMinSpend(0);
+    setFormExpiry('');
+    setFormUsageLimit(0);
+    setFormDescription('');
     setFormIsActive(true);
     setIsDrawerOpen(true);
   };
@@ -74,7 +75,6 @@ export const AdminCoupons: React.FC = () => {
         description: formDescription.trim(),
         isActive: formIsActive,
       });
-      addToast('Coupon Updated', `Coupon ${formCode.toUpperCase()} saved.`, 'success');
     } else {
       addCoupon({
         code: formCode.trim().toUpperCase(),
@@ -86,7 +86,6 @@ export const AdminCoupons: React.FC = () => {
         isActive: formIsActive,
         description: formDescription.trim(),
       });
-      addToast('Coupon Created', `New coupon code ${formCode.toUpperCase()} created.`, 'success');
     }
 
     setIsDrawerOpen(false);
@@ -95,7 +94,6 @@ export const AdminCoupons: React.FC = () => {
   const handleDelete = (id: string, code: string) => {
     if (confirm(`Are you sure you want to delete coupon code "${code}"?`)) {
       deleteCoupon(id);
-      addToast('Coupon Deleted', `${code} deleted.`, 'info');
     }
   };
 
@@ -300,15 +298,16 @@ export const AdminCoupons: React.FC = () => {
               />
             </div>
 
-            <label className="flex items-center gap-2 text-xs font-bold cursor-pointer pt-1">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-3 pt-1">
+              <Switch
+                id="activate-coupon-switch"
                 checked={formIsActive}
-                onChange={e => setFormIsActive(e.target.checked)}
-                className="rounded"
+                onCheckedChange={setFormIsActive}
               />
-              <span>Activate Coupon Immediately</span>
-            </label>
+              <label htmlFor="activate-coupon-switch" className="text-xs font-bold text-slate-800 cursor-pointer select-none">
+                Activate Coupon Immediately
+              </label>
+            </div>
 
             <div className="pt-4 border-t border-slate-200 flex gap-2">
               <Button

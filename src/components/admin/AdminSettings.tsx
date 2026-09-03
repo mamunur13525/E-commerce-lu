@@ -13,13 +13,31 @@ import {
   Layers,
   Megaphone,
   Bell,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Phone,
+  Mail,
+  MapPin,
+  Clock,
+  Instagram,
+  Facebook,
+  Twitter,
+  Youtube,
+  Share2,
+  Save,
+  Globe,
+  ExternalLink,
+  MessageCircle,
+  Building2,
+  ShieldCheck,
+  Send
 } from 'lucide-react';
 import { HeroSlide, FacebookReview } from '../../types';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Switch } from '../ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 
 export const AdminSettings: React.FC = () => {
@@ -36,7 +54,7 @@ export const AdminSettings: React.FC = () => {
     addToast 
   } = useStore();
 
-  const [activeSection, setActiveSection] = useState<'hero' | 'testimonials' | 'announcements'>('hero');
+  const [activeSection, setActiveSection] = useState<'hero' | 'testimonials' | 'announcements' | 'contact' | 'social'>('hero');
 
   // Hero Slide Edit State
   const [isSlideDrawerOpen, setIsSlideDrawerOpen] = useState(false);
@@ -75,6 +93,31 @@ export const AdminSettings: React.FC = () => {
   const [promoCode, setPromoCode] = useState(storeSettings.promoCode);
   const [promoDiscount, setPromoDiscount] = useState(storeSettings.promoDiscountPercent);
 
+  // Contact Information State
+  const [contactForm, setContactForm] = useState({
+    email: storeSettings.contactInfo?.email || 'concierge@lumina-studio.com',
+    notificationEmail: storeSettings.notificationEmail || 'concierge@lumina-studio.com',
+    phone: storeSettings.contactInfo?.phone || '+1 (555) 234-5678',
+    whatsapp: storeSettings.contactInfo?.whatsapp || '+1 (555) 234-5678',
+    address: storeSettings.contactInfo?.address || '142 Mercer Street, Soho',
+    city: storeSettings.contactInfo?.city || 'New York',
+    country: storeSettings.contactInfo?.country || 'United States',
+    zip: storeSettings.contactInfo?.zip || '10012',
+    hours: storeSettings.contactInfo?.hours || 'Monday - Friday: 9:00 AM - 6:00 PM EST',
+    supportNote: storeSettings.contactInfo?.supportNote || 'Direct concierge support and personalized sizing consultations.',
+  });
+
+  // Social Media Links State
+  const [socialForm, setSocialForm] = useState({
+    instagram: storeSettings.socialLinks?.instagram || 'https://instagram.com/lumina_archive',
+    facebook: storeSettings.socialLinks?.facebook || 'https://facebook.com/lumina.archive',
+    twitter: storeSettings.socialLinks?.twitter || 'https://x.com/lumina_archive',
+    youtube: storeSettings.socialLinks?.youtube || '',
+    tiktok: storeSettings.socialLinks?.tiktok || '',
+    pinterest: storeSettings.socialLinks?.pinterest || 'https://pinterest.com/lumina_design',
+    linkedin: storeSettings.socialLinks?.linkedin || '',
+  });
+
   // Hero Slide Handlers
   const handleOpenEditSlide = (slide: HeroSlide, idx: number) => {
     setEditingSlideIdx(idx);
@@ -86,13 +129,13 @@ export const AdminSettings: React.FC = () => {
     setEditingSlideIdx(null);
     setSlideForm({
       id: `hero-${Date.now()}`,
-      title: 'Heirloom Studio Editions',
-      subtitle: 'Limited seasonal batch releases handcrafted in Kyoto',
-      tagline: 'New Season',
-      image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=1600&q=80',
-      ctaText: 'Shop New Arrivals',
+      title: '',
+      subtitle: '',
+      tagline: '',
+      image: '',
+      ctaText: '',
       ctaLink: 'shop',
-      badge: 'Exclusive'
+      badge: ''
     });
     setIsSlideDrawerOpen(true);
   };
@@ -126,15 +169,15 @@ export const AdminSettings: React.FC = () => {
     setEditingTestimonial(null);
     setTestForm({
       authorName: '',
-      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&q=80',
-      authorLocation: 'San Francisco, CA',
+      authorAvatar: '',
+      authorLocation: '',
       rating: 5,
-      timeAgo: 'Just now',
-      content: 'The drape and weave of this piece is exceptional. Superb quality.',
-      productMentioned: 'Linen Overshirt',
+      timeAgo: '',
+      content: '',
+      productMentioned: '',
       verifiedPurchase: true,
-      likes: 12,
-      comments: 1,
+      likes: 0,
+      comments: 0,
       shares: 0
     });
     setIsTestimonialDrawerOpen(true);
@@ -184,6 +227,43 @@ export const AdminSettings: React.FC = () => {
     addToast('Settings Saved', 'Top store banner and global promotions updated.', 'success');
   };
 
+  // Contact Info Handlers
+  const handleSaveContactInfo = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateStoreSettings({
+      notificationEmail: contactForm.notificationEmail.trim(),
+      contactInfo: {
+        email: contactForm.email.trim(),
+        phone: contactForm.phone.trim(),
+        address: contactForm.address.trim(),
+        city: contactForm.city.trim(),
+        country: contactForm.country.trim(),
+        zip: contactForm.zip.trim(),
+        hours: contactForm.hours.trim(),
+        whatsapp: contactForm.whatsapp.trim(),
+        supportNote: contactForm.supportNote.trim(),
+      }
+    });
+    addToast('Contact Info Saved', 'Studio contact information has been updated for clients and footer.', 'success');
+  };
+
+  // Social Links Handlers
+  const handleSaveSocialLinks = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateStoreSettings({
+      socialLinks: {
+        instagram: socialForm.instagram.trim(),
+        facebook: socialForm.facebook.trim(),
+        twitter: socialForm.twitter.trim(),
+        youtube: socialForm.youtube.trim(),
+        tiktok: socialForm.tiktok.trim(),
+        pinterest: socialForm.pinterest.trim(),
+        linkedin: socialForm.linkedin.trim(),
+      }
+    });
+    addToast('Social Media Links Updated', 'Footer and Contact page social links have been updated.', 'success');
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       
@@ -194,16 +274,18 @@ export const AdminSettings: React.FC = () => {
             Storefront Settings & Visual Customization
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Manage the hero banner slides, customer testimonial carousel, and announcement notifications.
+            Manage banner slides, testimonials, announcement bar, contact info, and footer social links.
           </p>
         </div>
 
         {/* Sub Navigation */}
-        <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex flex-wrap items-center bg-white p-1 rounded-2xl border border-slate-200 shadow-xs gap-1">
           {[
             { id: 'hero', label: `Hero Slides (${heroSlides.length})` },
             { id: 'testimonials', label: `Testimonials (${facebookReviews.length})` },
             { id: 'announcements', label: 'Store Banner & Promos' },
+            { id: 'contact', label: 'Contact Info' },
+            { id: 'social', label: 'Footer & Socials' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -374,15 +456,16 @@ export const AdminSettings: React.FC = () => {
               />
             </div>
 
-            <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-3 pt-1">
+              <Switch
+                id="display-announcement-switch"
                 checked={showAnnouncement}
-                onChange={e => setShowAnnouncement(e.target.checked)}
-                className="rounded"
+                onCheckedChange={setShowAnnouncement}
               />
-              <span>Display top announcement bar on customer site</span>
-            </label>
+              <label htmlFor="display-announcement-switch" className="text-xs font-bold text-slate-800 cursor-pointer select-none">
+                Display top announcement bar on customer site
+              </label>
+            </div>
 
             <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
               <div>
@@ -420,6 +503,512 @@ export const AdminSettings: React.FC = () => {
             </Button>
           </form>
         </Card>
+      )}
+
+      {/* SECTION 4: CONTACT INFORMATION */}
+      {activeSection === 'contact' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Form */}
+          <div className="lg:col-span-7">
+            <Card className="p-6 bg-white rounded-3xl border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-black text-slate-950">
+                    Concierge & Contact Information
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure customer support email, phone hotline, atelier address, and opening hours.
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Phone className="w-4 h-4" />
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveContactInfo} className="space-y-4">
+                {/* Communication channels */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                      Public Concierge Email
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        type="email"
+                        required
+                        value={contactForm.email}
+                        onChange={e => setContactForm({ ...contactForm, email: e.target.value })}
+                        placeholder="concierge@lumina-studio.com"
+                        className="bg-slate-50 rounded-xl text-xs pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                      Admin Notification Email
+                    </label>
+                    <div className="relative">
+                      <Bell className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        type="email"
+                        required
+                        value={contactForm.notificationEmail}
+                        onChange={e => setContactForm({ ...contactForm, notificationEmail: e.target.value })}
+                        placeholder="admin@lumina-studio.com"
+                        className="bg-slate-50 rounded-xl text-xs pl-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                      Telephone / Support Line
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        value={contactForm.phone}
+                        onChange={e => setContactForm({ ...contactForm, phone: e.target.value })}
+                        placeholder="+1 (555) 234-5678"
+                        className="bg-slate-50 rounded-xl text-xs pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                      WhatsApp Direct Number
+                    </label>
+                    <div className="relative">
+                      <MessageCircle className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Input
+                        value={contactForm.whatsapp}
+                        onChange={e => setContactForm({ ...contactForm, whatsapp: e.target.value })}
+                        placeholder="+1 (555) 234-5678"
+                        className="bg-slate-50 rounded-xl text-xs pl-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Address Section */}
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    Atelier / Studio Street Address
+                  </label>
+                  <div className="relative">
+                    <MapPin className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={contactForm.address}
+                      onChange={e => setContactForm({ ...contactForm, address: e.target.value })}
+                      placeholder="142 Mercer Street, Soho"
+                      className="bg-slate-50 rounded-xl text-xs pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">City</label>
+                    <Input
+                      value={contactForm.city}
+                      onChange={e => setContactForm({ ...contactForm, city: e.target.value })}
+                      placeholder="New York"
+                      className="bg-slate-50 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">Country</label>
+                    <Input
+                      value={contactForm.country}
+                      onChange={e => setContactForm({ ...contactForm, country: e.target.value })}
+                      placeholder="United States"
+                      className="bg-slate-50 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">ZIP / Postal</label>
+                    <Input
+                      value={contactForm.zip}
+                      onChange={e => setContactForm({ ...contactForm, zip: e.target.value })}
+                      placeholder="10012"
+                      className="bg-slate-50 rounded-xl text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Operating Hours & Support Note */}
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    Concierge Hours
+                  </label>
+                  <div className="relative">
+                    <Clock className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={contactForm.hours}
+                      onChange={e => setContactForm({ ...contactForm, hours: e.target.value })}
+                      placeholder="Monday - Friday: 9:00 AM - 6:00 PM EST"
+                      className="bg-slate-50 rounded-xl text-xs pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    Support Note / Studio Promise
+                  </label>
+                  <Textarea
+                    rows={2}
+                    value={contactForm.supportNote}
+                    onChange={e => setContactForm({ ...contactForm, supportNote: e.target.value })}
+                    placeholder="Direct concierge support and personalized sizing consultations."
+                    className="bg-slate-50 rounded-xl text-xs resize-none"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    className="rounded-xl bg-slate-950 text-white font-bold text-xs uppercase tracking-wider h-11 px-6 gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Save Contact Information</span>
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+
+          {/* Right Column: Live Preview */}
+          <div className="lg:col-span-5 space-y-4">
+            <Card className="p-6 bg-slate-950 text-white rounded-3xl border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Live Customer Preview</span>
+                </div>
+                <Badge variant="outline" className="text-[9px] uppercase border-slate-700 text-slate-300">
+                  Contact Us Page
+                </Badge>
+              </div>
+
+              <div className="mt-4 space-y-4 text-xs">
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Mail className="w-3.5 h-3.5 text-slate-300" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Concierge Email</p>
+                    <p className="font-semibold text-white mt-0.5">{contactForm.email || 'None specified'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Phone className="w-3.5 h-3.5 text-slate-300" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Direct Telephone</p>
+                    <p className="font-semibold text-white mt-0.5">{contactForm.phone || 'None specified'}</p>
+                    {contactForm.whatsapp && (
+                      <p className="text-[11px] text-emerald-400 mt-0.5 flex items-center gap-1">
+                        <MessageCircle className="w-3 h-3 inline" /> WhatsApp available
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-slate-300" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Physical Atelier</p>
+                    <p className="font-semibold text-white mt-0.5">{contactForm.address || 'Address not configured'}</p>
+                    <p className="text-slate-400 text-[11px]">{contactForm.city} {contactForm.zip && `· ${contactForm.zip}`} {contactForm.country && `· ${contactForm.country}`}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Clock className="w-3.5 h-3.5 text-slate-300" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Operating Schedule</p>
+                    <p className="font-semibold text-white mt-0.5">{contactForm.hours || 'Hours not set'}</p>
+                  </div>
+                </div>
+
+                {contactForm.supportNote && (
+                  <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 italic">
+                    "{contactForm.supportNote}"
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs text-slate-600">
+              <div className="flex items-center gap-2 font-bold text-slate-900 mb-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Automatic Sync</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-slate-500">
+                Updating your contact details automatically updates the <strong>Contact Us</strong> page, the <strong>Footer</strong> concierge panel, and customer order confirmation emails.
+              </p>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 5: FOOTER & SOCIAL MEDIA CHANNELS */}
+      {activeSection === 'social' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Form */}
+          <div className="lg:col-span-7">
+            <Card className="p-6 bg-white rounded-3xl border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-black text-slate-950">
+                    Footer & Social Media Links
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Connect your brand profiles to display clickable icons in the footer and contact sections.
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Share2 className="w-4 h-4" />
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveSocialLinks} className="space-y-4">
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    Instagram Profile URL
+                  </label>
+                  <div className="relative">
+                    <Instagram className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={socialForm.instagram}
+                      onChange={e => setSocialForm({ ...socialForm, instagram: e.target.value })}
+                      placeholder="https://instagram.com/lumina_archive"
+                      className="bg-slate-50 rounded-xl text-xs pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    Facebook Page URL
+                  </label>
+                  <div className="relative">
+                    <Facebook className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={socialForm.facebook}
+                      onChange={e => setSocialForm({ ...socialForm, facebook: e.target.value })}
+                      placeholder="https://facebook.com/lumina.archive"
+                      className="bg-slate-50 rounded-xl text-xs pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    Twitter / X Profile URL
+                  </label>
+                  <div className="relative">
+                    <Twitter className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={socialForm.twitter}
+                      onChange={e => setSocialForm({ ...socialForm, twitter: e.target.value })}
+                      placeholder="https://x.com/lumina_archive"
+                      className="bg-slate-50 rounded-xl text-xs pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    YouTube Channel URL
+                  </label>
+                  <div className="relative">
+                    <Youtube className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={socialForm.youtube}
+                      onChange={e => setSocialForm({ ...socialForm, youtube: e.target.value })}
+                      placeholder="https://youtube.com/@lumina"
+                      className="bg-slate-50 rounded-xl text-xs pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    Pinterest Board URL
+                  </label>
+                  <div className="relative">
+                    <Globe className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={socialForm.pinterest}
+                      onChange={e => setSocialForm({ ...socialForm, pinterest: e.target.value })}
+                      placeholder="https://pinterest.com/lumina_design"
+                      className="bg-slate-50 rounded-xl text-xs pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    TikTok URL
+                  </label>
+                  <div className="relative">
+                    <Share2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={socialForm.tiktok}
+                      onChange={e => setSocialForm({ ...socialForm, tiktok: e.target.value })}
+                      placeholder="https://tiktok.com/@lumina"
+                      className="bg-slate-50 rounded-xl text-xs pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block mb-1">
+                    LinkedIn Company URL
+                  </label>
+                  <div className="relative">
+                    <Building2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={socialForm.linkedin}
+                      onChange={e => setSocialForm({ ...socialForm, linkedin: e.target.value })}
+                      placeholder="https://linkedin.com/company/lumina-studio"
+                      className="bg-slate-50 rounded-xl text-xs pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    className="rounded-xl bg-slate-950 text-white font-bold text-xs uppercase tracking-wider h-11 px-6 gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Save Social Media Links</span>
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+
+          {/* Right Column: Live Footer Preview */}
+          <div className="lg:col-span-5 space-y-4">
+            <Card className="p-6 bg-[#0c0d0e] text-white rounded-3xl border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Live Footer Display</span>
+                </div>
+                <Badge variant="outline" className="text-[9px] uppercase border-slate-700 text-slate-300">
+                  Global Footer
+                </Badge>
+              </div>
+
+              <div className="mt-5">
+                <p className="text-xs font-bold text-slate-300 mb-3 uppercase tracking-wider">Active Social Channels</p>
+                <div className="flex flex-wrap gap-2.5">
+                  {socialForm.instagram && (
+                    <a
+                      href={socialForm.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5"
+                      title="Instagram"
+                    >
+                      <Instagram className="w-4 h-4" />
+                    </a>
+                  )}
+                  {socialForm.facebook && (
+                    <a
+                      href={socialForm.facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5"
+                      title="Facebook"
+                    >
+                      <Facebook className="w-4 h-4" />
+                    </a>
+                  )}
+                  {socialForm.twitter && (
+                    <a
+                      href={socialForm.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5"
+                      title="Twitter / X"
+                    >
+                      <Twitter className="w-4 h-4" />
+                    </a>
+                  )}
+                  {socialForm.youtube && (
+                    <a
+                      href={socialForm.youtube}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5"
+                      title="YouTube"
+                    >
+                      <Youtube className="w-4 h-4" />
+                    </a>
+                  )}
+                  {socialForm.pinterest && (
+                    <a
+                      href={socialForm.pinterest}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5"
+                      title="Pinterest"
+                    >
+                      <Globe className="w-4 h-4" />
+                    </a>
+                  )}
+                  {socialForm.tiktok && (
+                    <a
+                      href={socialForm.tiktok}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5"
+                      title="TikTok"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </a>
+                  )}
+                  {socialForm.linkedin && (
+                    <a
+                      href={socialForm.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5"
+                      title="LinkedIn"
+                    >
+                      <Building2 className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+
+                <div className="mt-5 pt-4 border-t border-white/10">
+                  <p className="text-[11px] text-slate-400">
+                    Channels with configured URLs appear automatically in the footer row. If you leave a field empty, that social icon is hidden from customers.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
       )}
 
       {/* Hero Slide Edit Sheet */}

@@ -19,6 +19,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
+import { Switch } from '../ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 
 export const AdminShipping: React.FC = () => {
@@ -47,10 +48,10 @@ export const AdminShipping: React.FC = () => {
 
   const handleOpenAdd = () => {
     setEditingOption(null);
-    setFormName('Standard Ground Courier');
-    setFormDescription('Carbon-neutral parcel delivery with online tracking');
-    setFormPrice(15);
-    setFormEstimatedDays('3-5 Business Days');
+    setFormName('');
+    setFormDescription('');
+    setFormPrice(0);
+    setFormEstimatedDays('');
     setFormIsDefault(false);
     setIsDrawerOpen(true);
   };
@@ -77,7 +78,6 @@ export const AdminShipping: React.FC = () => {
         estimatedDays: formEstimatedDays.trim(),
         isDefault: formIsDefault,
       });
-      addToast('Shipping Rate Updated', `${formName} rate saved.`, 'success');
     } else {
       addDeliveryOption({
         name: formName.trim(),
@@ -86,7 +86,6 @@ export const AdminShipping: React.FC = () => {
         estimatedDays: formEstimatedDays.trim(),
         isDefault: formIsDefault,
       });
-      addToast('Shipping Option Added', `${formName} added to checkout methods.`, 'success');
     }
 
     setIsDrawerOpen(false);
@@ -99,14 +98,12 @@ export const AdminShipping: React.FC = () => {
     }
     if (confirm(`Are you sure you want to remove shipping method "${name}"?`)) {
       deleteDeliveryOption(id);
-      addToast('Shipping Option Removed', `${name} deleted.`, 'info');
     }
   };
 
   const handleUpdateThreshold = (e: React.FormEvent) => {
     e.preventDefault();
     updateStoreSettings({ freeShippingThreshold: Number(freeShippingThreshold) });
-    addToast('Threshold Saved', `Free shipping threshold updated to ${formatCurrency(freeShippingThreshold)}.`, 'success');
   };
 
   return (
@@ -290,15 +287,16 @@ export const AdminShipping: React.FC = () => {
               />
             </div>
 
-            <label className="flex items-center gap-2 text-xs font-bold cursor-pointer pt-1">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-3 pt-1">
+              <Switch
+                id="default-shipping-switch"
                 checked={formIsDefault}
-                onChange={e => setFormIsDefault(e.target.checked)}
-                className="rounded"
+                onCheckedChange={setFormIsDefault}
               />
-              <span>Set as Default Checkout Option</span>
-            </label>
+              <label htmlFor="default-shipping-switch" className="text-xs font-bold text-slate-800 cursor-pointer select-none">
+                Set as Default Checkout Option
+              </label>
+            </div>
 
             <div className="pt-4 border-t border-slate-200 flex gap-2">
               <Button

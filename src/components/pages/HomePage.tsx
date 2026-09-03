@@ -3,7 +3,7 @@ import { HeroSection } from '../home/HeroSection';
 import { StickyCategories } from '../home/StickyCategories';
 import { PopularProducts } from '../home/PopularProducts';
 import { FacebookReviewsSlider } from '../home/FacebookReviewsSlider';
-import { useStore } from '../../context/StoreContext';
+import { FAQ } from '../home/FAQ';
 
 export const HomePage: React.FC = () => {
   return (
@@ -19,6 +19,9 @@ export const HomePage: React.FC = () => {
 
       {/* 4. Real Stories from Satisfied Owners (2 items per line, auto-slide 1s) (Req 6) */}
       <FacebookReviewsSlider />
+
+      {/* 5. FAQ Section above footer */}
+      <FAQ />
     </div>
   );
 };

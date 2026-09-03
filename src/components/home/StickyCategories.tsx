@@ -114,77 +114,53 @@ export const StickyCategories: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Categories Section: Smaller image in left, title & sub-collections (Req 3) */}
-      <section className="py-10 sm:py-14 bg-slate-50/50 border-b border-slate-200/70">
+      {/* Main Categories Section */}
+      <section className="py-10 sm:py-14 bg-white border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-            <div>
-              <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-1">
-                <Grid className="w-3.5 h-3.5 text-slate-900" />
-                <span>Curated Departments</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-                Explore by Category
-              </h2>
-            </div>
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+              Categories
+            </h2>
 
             <Button
               variant="link"
               onClick={() => navigateTo('shop')}
-              className="text-xs font-bold text-slate-900 p-0 hover:text-slate-600 self-start sm:self-auto"
+              className="text-xs font-semibold text-slate-600 p-0 hover:text-slate-950"
             >
-              View Full Collection Index <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              All Categories <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </Button>
           </div>
 
-          {/* Category Cards with Small Image on the Left (Req 3) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+          {/* Category Cards with Small Image on the Left */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {categories.map((category) => (
               <Card
                 key={category.id}
                 id={`category-card-${category.slug}`}
                 onClick={() => handleCategoryClick(category.slug)}
-                className="group p-3 sm:p-3.5 bg-white rounded-2xl border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-400 transition-all cursor-pointer flex items-center gap-3.5"
+                className="group p-3 bg-slate-50/60 hover:bg-white rounded-xl border border-slate-200/60 hover:border-slate-300 shadow-none hover:shadow-xs transition-all cursor-pointer flex items-center gap-3.5"
               >
-                {/* Smaller image on the left (Req 3) */}
-                <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 relative border border-slate-200/60">
+                {/* Smaller image on the left */}
+                <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 relative">
                   <img
                     src={category.image}
                     alt={category.name}
-                    className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute top-1.5 left-1.5 w-6 h-6 rounded-md bg-black/60 backdrop-blur-xs text-white flex items-center justify-center">
-                    {getCategoryIcon(category.iconName, 'w-3 h-3')}
-                  </div>
                 </div>
 
                 {/* Content on the Right */}
-                <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-0.5">
+                <div className="flex-1 min-w-0 flex items-center justify-between">
                   <div>
-                    <div className="flex items-center justify-between gap-1">
-                      <h3 className="text-sm font-bold text-slate-950 group-hover:text-slate-700 truncate">
-                        {category.name}
-                      </h3>
-                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-                    </div>
+                    <h3 className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-slate-600 truncate">
+                      {category.name}
+                    </h3>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      {category.itemCount} artisan pieces
+                      {category.itemCount} items
                     </p>
                   </div>
-
-                  {/* Sub-Collections mini tags */}
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {category.subCollections.slice(0, 2).map(sub => (
-                      <span
-                        key={sub.id}
-                        onClick={e => handleSubCollectionClick(category.slug, sub.slug, e)}
-                        className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-md text-slate-600 transition-colors"
-                      >
-                        {sub.name}
-                      </span>
-                    ))}
-                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                 </div>
               </Card>
             ))}

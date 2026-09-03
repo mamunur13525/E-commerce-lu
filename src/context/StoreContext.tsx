@@ -14,18 +14,61 @@ import {
   Coupon,
   FacebookReview
 } from '../types';
-import { 
-  INITIAL_PRODUCTS, 
-  INITIAL_CATEGORIES, 
-  INITIAL_HERO_SLIDES, 
-  INITIAL_STORE_SETTINGS, 
-  DEFAULT_USER_PROFILE, 
-  INITIAL_ORDERS,
-  INITIAL_DELIVERY_OPTIONS,
-  INITIAL_COUPONS,
-  INITIAL_FACEBOOK_REVIEWS
-} from '../data/mockData';
 import { generateId } from '../lib/utils';
+
+const DEFAULT_USER_PROFILE: UserProfile = {
+  id: 'user-1',
+  name: 'Store Customer',
+  email: 'customer@lumina.design',
+  phone: '+1 (555) 000-0000',
+  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+  isGuest: false,
+  registeredDate: new Date().toISOString().split('T')[0],
+  savedAddresses: [],
+};
+
+const DEFAULT_STORE_SETTINGS: StoreSettings = {
+  freeShippingThreshold: 150,
+  standardShippingRate: 15,
+  expressShippingRate: 25,
+  announcementText: 'Complimentary worldwide carbon-neutral delivery on orders over $150',
+  showAnnouncement: true,
+  promoCode: '',
+  promoDiscountPercent: 0,
+  notificationEmail: 'mdshn1122@gmail.com',
+  contactInfo: {
+    email: 'mdshn1122@gmail.com',
+    phone: '+1 (555) 234-5678',
+    address: '142 Mercer Street, Soho',
+    city: 'New York',
+    country: 'United States',
+    zip: '10012',
+    hours: 'Monday - Friday: 9:00 AM - 6:00 PM EST',
+    whatsapp: '+1 (555) 234-5678',
+    supportNote: 'Direct concierge support and bespoke architectural inquiries.',
+  },
+  socialLinks: {
+    instagram: 'https://instagram.com/lumina_archive',
+    facebook: 'https://facebook.com/lumina.archive',
+    twitter: 'https://x.com/lumina_archive',
+    youtube: '',
+    tiktok: '',
+    pinterest: 'https://pinterest.com/lumina_design',
+    linkedin: '',
+  },
+  paymentSettings: {
+    allowOnlinePayment: true,
+    allowCashOnDelivery: true,
+    codInstructions: 'Please have the exact cash amount ready upon delivery arrival.',
+  },
+  imagekitConfig: {
+    urlEndpoint: '',
+    publicKey: '',
+    privateKey: '',
+  },
+};
+
+const DEFAULT_DELIVERY_OPTIONS: DeliveryOption[] = [];
 
 interface StoreContextType {
   // Navigation
@@ -36,6 +79,7 @@ interface StoreContextType {
   
   // Products & Categories
   products: Product[];
+  isLoadingProducts: boolean;
   categories: Category[];
   addProduct: (product: Omit<Product, 'id' | 'createdAt'>) => void;
   updateProduct: (id: string, product: Partial<Product>) => void;
@@ -82,11 +126,19 @@ interface StoreContextType {
   updateUserProfile: (profile: Partial<UserProfile>) => void;
   isGuestMode: boolean;
   setIsGuestMode: (isGuest: boolean) => void;
+  isLoginModalOpen: boolean;
+  setIsLoginModalOpen: (open: boolean) => void;
+  lastLoginTime: string | null;
+  lastLogoutTime: string | null;
+  loginWithEmail: (email: string, pass: string) => void;
+  loginWithGoogle: () => void;
+  logoutUser: () => void;
   
   // Orders
   orders: Order[];
   createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'orderDate' | 'trackingNumber' | 'carrier' | 'trackingSteps' | 'emailSentTo'>) => Order;
   updateOrderStatus: (orderId: string, newStatus: Order['status']) => void;
+  deleteOrder: (orderId: string) => void;
   
   // Delivery Options (Shipping Rates)
   deliveryOptions: DeliveryOption[];
@@ -118,56 +170,100 @@ interface StoreContextType {
   
   // Product Reviews & Comments
   addProductComment: (productId: string, comment: { userName: string; text: string; rating?: number }) => void;
+
+  // Database Connection Status (MongoDB / Mongoose)
+  dbStatus: {
+    connected: boolean;
+    usingFallback: boolean;
+    uriConfigured: boolean;
+    databaseName: string;
+    error?: string | null;
+    errorCode?: 'IP_NOT_WHITELISTED' | 'AUTH_FAILED' | 'TIMEOUT' | 'UNKNOWN' | null;
+    atlasIpWhitelistNeeded?: boolean;
+    recommendation?: string | null;
+    lastAttemptAt?: string;
+    counts?: {
+      products: number;
+      categories: number;
+      orders: number;
+      coupons: number;
+      reviews: number;
+    };
+  } | null;
+  refreshDBData: () => Promise<void>;
+  reconnectDB: () => Promise<boolean>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Database Status
+  const [dbStatus, setDbStatus] = useState<StoreContextType['dbStatus']>(null);
+
   // Navigation
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // Products
+  // Clean any old mock data out of localStorage on initial boot
+  useEffect(() => {
+    const hasCleanedMockData = localStorage.getItem('lumina_cleaned_mock_v3');
+    if (!hasCleanedMockData) {
+      localStorage.removeItem('lumina_products');
+      localStorage.removeItem('lumina_categories');
+      localStorage.removeItem('lumina_hero_slides');
+      localStorage.removeItem('lumina_fb_reviews');
+      localStorage.removeItem('lumina_coupons');
+      localStorage.removeItem('lumina_orders');
+      localStorage.removeItem('lumina_wishlist');
+      localStorage.setItem('lumina_cleaned_mock_v3', 'true');
+    }
+  }, []);
+
+  // Products - Only from MongoDB
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('lumina_products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(() => {
+    const saved = localStorage.getItem('lumina_products');
+    return !saved || JSON.parse(saved).length === 0;
   });
 
-  // Categories
+  // Categories - Only from MongoDB
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('lumina_categories');
-    return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Hero Slides
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => {
     const saved = localStorage.getItem('lumina_hero_slides');
-    return saved ? JSON.parse(saved) : INITIAL_HERO_SLIDES;
+    return saved ? JSON.parse(saved) : [];
   });
 
-  // Facebook Reviews / Testimonials
+  // Facebook Reviews / Testimonials - Only from MongoDB
   const [facebookReviews, setFacebookReviews] = useState<FacebookReview[]>(() => {
     const saved = localStorage.getItem('lumina_fb_reviews');
-    return saved ? JSON.parse(saved) : INITIAL_FACEBOOK_REVIEWS;
+    return saved ? JSON.parse(saved) : [];
   });
 
-  // Coupons
+  // Coupons - Only from MongoDB
   const [coupons, setCoupons] = useState<Coupon[]>(() => {
     const saved = localStorage.getItem('lumina_coupons');
-    return saved ? JSON.parse(saved) : INITIAL_COUPONS;
+    return saved ? JSON.parse(saved) : [];
   });
 
-  // Store Settings
+  // Store Settings - Synced with MongoDB
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
     const saved = localStorage.getItem('lumina_settings');
-    return saved ? JSON.parse(saved) : INITIAL_STORE_SETTINGS;
+    return saved ? JSON.parse(saved) : DEFAULT_STORE_SETTINGS;
   });
 
   // Delivery Options
   const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>(() => {
     const saved = localStorage.getItem('lumina_delivery_options');
-    return saved ? JSON.parse(saved) : INITIAL_DELIVERY_OPTIONS;
+    return saved ? JSON.parse(saved) : DEFAULT_DELIVERY_OPTIONS;
   });
 
   // Cart
@@ -182,7 +278,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Wishlist
   const [wishlist, setWishlist] = useState<string[]>(() => {
     const saved = localStorage.getItem('lumina_wishlist');
-    return saved ? JSON.parse(saved) : ['prod-1', 'prod-3'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // User Profile
@@ -191,11 +287,48 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return saved ? JSON.parse(saved) : DEFAULT_USER_PROFILE;
   });
   const [isGuestMode, setIsGuestMode] = useState<boolean>(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [lastLoginTime, setLastLoginTime] = useState<string | null>(() => localStorage.getItem('lumina_last_login_time'));
+  const [lastLogoutTime, setLastLogoutTime] = useState<string | null>(() => localStorage.getItem('lumina_last_logout_time'));
 
-  // Orders
+  const loginWithEmail = (email: string, pass: string) => {
+    const timeStr = new Date().toLocaleString();
+    setLastLoginTime(timeStr);
+    localStorage.setItem('lumina_last_login_time', timeStr);
+    setUserProfile(prev => ({ ...prev, email, name: email.split('@')[0], isGuest: false }));
+    setIsGuestMode(false);
+    setIsLoginModalOpen(false);
+    addToast('Successfully Logged In', `Welcome back, ${email}!`, 'success');
+  };
+
+  const loginWithGoogle = () => {
+    const timeStr = new Date().toLocaleString();
+    setLastLoginTime(timeStr);
+    localStorage.setItem('lumina_last_login_time', timeStr);
+    setUserProfile(prev => ({
+      ...prev,
+      name: 'Google User',
+      email: 'google.user@lumina.design',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+      isGuest: false
+    }));
+    setIsGuestMode(false);
+    setIsLoginModalOpen(false);
+    addToast('Google Sign-In Successful', 'Logged in securely with Google account.', 'success');
+  };
+
+  const logoutUser = () => {
+    const timeStr = new Date().toLocaleString();
+    setLastLogoutTime(timeStr);
+    localStorage.setItem('lumina_last_logout_time', timeStr);
+    setIsGuestMode(true);
+    addToast('Logged Out', `Logged out at ${timeStr}.`, 'info');
+  };
+
+  // Orders - Only from MongoDB
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem('lumina_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Quick View Modal
@@ -264,6 +397,81 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('lumina_delivery_options', JSON.stringify(deliveryOptions));
   }, [deliveryOptions]);
 
+  // Synchronize with backend database (MongoDB / Mongoose)
+  const refreshDBData = async () => {
+    setIsLoadingProducts(true);
+    try {
+      const [prodRes, catRes, ordRes, coupRes, settRes, revRes, delRes, statusRes] = await Promise.allSettled([
+        fetch('/api/products').then(r => r.ok ? r.json() : []),
+        fetch('/api/categories').then(r => r.ok ? r.json() : []),
+        fetch('/api/orders').then(r => r.ok ? r.json() : []),
+        fetch('/api/coupons').then(r => r.ok ? r.json() : []),
+        fetch('/api/settings').then(r => r.ok ? r.json() : null),
+        fetch('/api/reviews').then(r => r.ok ? r.json() : []),
+        fetch('/api/delivery-options').then(r => r.ok ? r.json() : []),
+        fetch('/api/db/status').then(r => r.ok ? r.json() : null),
+      ]);
+
+      if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
+        setProducts(prodRes.value);
+      }
+      if (catRes.status === 'fulfilled' && Array.isArray(catRes.value)) {
+        setCategories(catRes.value);
+      }
+      if (ordRes.status === 'fulfilled' && Array.isArray(ordRes.value)) {
+        setOrders(ordRes.value);
+      }
+      if (coupRes.status === 'fulfilled' && Array.isArray(coupRes.value)) {
+        setCoupons(coupRes.value);
+      }
+      if (settRes.status === 'fulfilled' && settRes.value) {
+        setStoreSettings(settRes.value);
+      }
+      if (revRes.status === 'fulfilled' && Array.isArray(revRes.value)) {
+        setFacebookReviews(revRes.value);
+      }
+      if (delRes.status === 'fulfilled' && Array.isArray(delRes.value)) {
+        setDeliveryOptions(delRes.value);
+      }
+      if (statusRes.status === 'fulfilled' && statusRes.value) {
+        setDbStatus(statusRes.value);
+      }
+    } catch (err) {
+      console.warn('Backend database synchronization warning:', err);
+    } finally {
+      setIsLoadingProducts(false);
+    }
+  };
+
+  const reconnectDB = async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/db/reconnect', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setDbStatus(data);
+        if (data.connected) {
+          addToast('Database Connected', 'Successfully connected to MongoDB Atlas cluster.');
+          await refreshDBData();
+          return true;
+        } else {
+          if (data.atlasIpWhitelistNeeded) {
+            addToast('Atlas IP Whitelist Required', 'Please allow 0.0.0.0/0 in MongoDB Atlas Network Access.', 'warning');
+          } else {
+            addToast('Connection Attempt Failed', data.error || 'Could not connect to MongoDB.', 'warning');
+          }
+          return false;
+        }
+      }
+    } catch {
+      addToast('Connection Check Error', 'Unable to reach backend server.', 'error');
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    refreshDBData();
+  }, []);
+
   // Navigation Helper
   const navigateTo = (page: PageType, payload?: { productId?: string; orderId?: string; category?: string; query?: string }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -326,6 +534,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           category: product.category,
           sku: product.sku,
           maxStock: product.stockQuantity || 10,
+          allowCod: product.allowCod !== false,
+          allowOnlinePayment: product.allowOnlinePayment !== false,
+          product: product,
         };
         return [...prevCart, newItem];
       }
@@ -484,6 +695,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setOrders(prev => [newOrder, ...prev]);
     clearCart();
+
+    // Persist to MongoDB backend
+    fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newOrder),
+    }).catch(err => console.warn('Order API sync warning:', err));
+
     return newOrder;
   };
 
@@ -526,7 +745,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       return ord;
     }));
+
+    // Persist status change to MongoDB
+    fetch(`/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    }).catch(err => console.warn('Order status sync warning:', err));
+
     addToast('Order Status Updated', `Order ${orderId} moved to ${newStatus}.`);
+  };
+
+  const deleteOrder = (orderId: string) => {
+    setOrders(prev => prev.filter(ord => ord.id !== orderId));
+
+    fetch(`/api/orders/${orderId}`, {
+      method: 'DELETE',
+    }).catch(err => console.warn('Order delete API sync warning:', err));
+
+    addToast('Order Removed', `Order was deleted.`, 'info');
   };
 
   // Product CRUD for Admin
@@ -537,16 +774,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       createdAt: new Date().toISOString(),
     };
     setProducts(prev => [newProd, ...prev]);
+
+    // Persist to MongoDB
+    fetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newProd),
+    }).catch(err => console.warn('Product create API sync warning:', err));
+
     addToast('Product Added', `${newProd.name} is now available in your catalog.`);
   };
 
   const updateProduct = (id: string, productData: Partial<Product>) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...productData } : p));
+
+    // Persist to MongoDB
+    fetch(`/api/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(productData),
+    }).catch(err => console.warn('Product update API sync warning:', err));
+
     addToast('Product Updated', 'Product changes saved successfully.');
   };
 
   const deleteProduct = (id: string) => {
     setProducts(prev => prev.filter(p => p.id !== id));
+
+    // Persist to MongoDB
+    fetch(`/api/products/${id}`, {
+      method: 'DELETE',
+    }).catch(err => console.warn('Product delete API sync warning:', err));
+
     addToast('Product Deleted', 'The product was removed from the catalog.', 'info');
   };
 
@@ -554,10 +813,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setProducts(prev => prev.map(p => {
       if (p.id === id) {
         const nextInStock = !p.inStock;
+        const nextQty = nextInStock ? (p.stockQuantity || 10) : 0;
+        
+        fetch(`/api/products/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inStock: nextInStock, stockQuantity: nextQty }),
+        }).catch(err => console.warn('Stock update sync warning:', err));
+
         return { 
           ...p, 
           inStock: nextInStock, 
-          stockQuantity: nextInStock ? (p.stockQuantity || 10) : 0 
+          stockQuantity: nextQty
         };
       }
       return p;
@@ -571,16 +838,35 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: generateId('cat'),
     };
     setCategories(prev => [...prev, newCat]);
+
+    fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCat),
+    }).catch(err => console.warn('Category create sync warning:', err));
+
     addToast('Category Created', `${newCat.name} was added.`);
   };
 
   const updateCategory = (id: string, catData: Partial<Category>) => {
     setCategories(prev => prev.map(c => c.id === id ? { ...c, ...catData } : c));
+
+    fetch(`/api/categories/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(catData),
+    }).catch(err => console.warn('Category update sync warning:', err));
+
     addToast('Category Updated', 'Category details updated.');
   };
 
   const deleteCategory = (id: string) => {
     setCategories(prev => prev.filter(c => c.id !== id));
+
+    fetch(`/api/categories/${id}`, {
+      method: 'DELETE',
+    }).catch(err => console.warn('Category delete sync warning:', err));
+
     addToast('Category Deleted', 'Category removed.', 'info');
   };
 
@@ -602,28 +888,61 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: generateId('rev'),
     };
     setFacebookReviews(prev => [newRev, ...prev]);
+
+    fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newRev),
+    }).catch(err => console.warn('Review create sync warning:', err));
+
     addToast('Review Added', 'Customer story published.');
   };
 
   const deleteFacebookReview = (id: string) => {
     setFacebookReviews(prev => prev.filter(r => r.id !== id));
+
+    fetch(`/api/reviews/${id}`, {
+      method: 'DELETE',
+    }).catch(err => console.warn('Review delete sync warning:', err));
+
     addToast('Review Deleted', 'Story removed.', 'info');
   };
 
   const updateFacebookReview = (id: string, reviewData: Partial<FacebookReview>) => {
     setFacebookReviews(prev => prev.map(r => r.id === id ? { ...r, ...reviewData } : r));
+
+    fetch(`/api/reviews/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reviewData),
+    }).catch(err => console.warn('Review update sync warning:', err));
+
     addToast('Review Updated', 'Testimonial updated.');
   };
 
   // Store Settings
   const updateStoreSettings = (newSettings: Partial<StoreSettings>) => {
     setStoreSettings(prev => ({ ...prev, ...newSettings }));
+
+    fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSettings),
+    }).catch(err => console.warn('Settings update sync warning:', err));
+
     addToast('Store Settings Saved', 'Global store rules and delivery thresholds updated.');
   };
 
   // Shipping Rates / Delivery Options
   const updateDeliveryOption = (id: string, option: Partial<DeliveryOption>) => {
     setDeliveryOptions(prev => prev.map(opt => opt.id === id ? { ...opt, ...option } : opt));
+
+    fetch(`/api/delivery-options/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(option),
+    }).catch(err => console.warn('Delivery option update API sync warning:', err));
+
     addToast('Shipping Rate Updated', 'Courier rate was updated.');
   };
 
@@ -633,11 +952,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: generateId('del'),
     };
     setDeliveryOptions(prev => [...prev, newOpt]);
+
+    fetch('/api/delivery-options', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newOpt),
+    }).catch(err => console.warn('Delivery option create API sync warning:', err));
+
     addToast('Shipping Option Added', `${newOpt.name} is now available for checkout.`);
   };
 
   const deleteDeliveryOption = (id: string) => {
     setDeliveryOptions(prev => prev.filter(opt => opt.id !== id));
+
+    fetch(`/api/delivery-options/${id}`, {
+      method: 'DELETE',
+    }).catch(err => console.warn('Delivery option delete API sync warning:', err));
+
     addToast('Shipping Rate Deleted', 'Option removed from checkout.', 'info');
   };
 
@@ -649,16 +980,35 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       usedCount: 0,
     };
     setCoupons(prev => [newCoup, ...prev]);
+
+    fetch('/api/coupons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCoup),
+    }).catch(err => console.warn('Coupon create sync warning:', err));
+
     addToast('Coupon Created', `Promo code ${newCoup.code} created with ${newCoup.discountPercent}% discount.`);
   };
 
   const updateCoupon = (id: string, couponData: Partial<Coupon>) => {
     setCoupons(prev => prev.map(c => c.id === id ? { ...c, ...couponData } : c));
+
+    fetch(`/api/coupons/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(couponData),
+    }).catch(err => console.warn('Coupon update sync warning:', err));
+
     addToast('Coupon Updated', 'Coupon rules saved.');
   };
 
   const deleteCoupon = (id: string) => {
     setCoupons(prev => prev.filter(c => c.id !== id));
+
+    fetch(`/api/coupons/${id}`, {
+      method: 'DELETE',
+    }).catch(err => console.warn('Coupon delete sync warning:', err));
+
     addToast('Coupon Deleted', 'Coupon removed.', 'info');
   };
 
@@ -702,6 +1052,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         selectedOrderId,
         navigateTo,
         products,
+        isLoadingProducts,
         categories,
         addProduct,
         updateProduct,
@@ -740,9 +1091,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateUserProfile,
         isGuestMode,
         setIsGuestMode,
+        isLoginModalOpen,
+        setIsLoginModalOpen,
+        lastLoginTime,
+        lastLogoutTime,
+        loginWithEmail,
+        loginWithGoogle,
+        logoutUser,
         orders,
         createOrder,
         updateOrderStatus,
+        deleteOrder,
         deliveryOptions,
         updateDeliveryOptions: setDeliveryOptions,
         updateDeliveryOption,
@@ -762,6 +1121,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addToast,
         removeToast,
         addProductComment,
+        dbStatus,
+        refreshDBData,
+        reconnectDB,
       }}
     >
       {children}

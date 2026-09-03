@@ -6,16 +6,22 @@ import { CartDrawer } from './components/common/CartDrawer';
 import { QuickViewModal } from './components/common/QuickViewModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { Footer } from './components/common/Footer';
+import { SEO } from './components/common/SEO';
+import { LoginModal } from './components/auth/LoginModal';
 
 // Pages
 import { HomePage } from './components/pages/HomePage';
 import { ShopPage } from './components/shop/ShopPage';
+import { CategoriesPage } from './components/shop/CategoriesPage';
 import { ProductDetailPage } from './components/product/ProductDetailPage';
 import { CartPage } from './components/cart/CartPage';
 import { WishlistPage } from './components/wishlist/WishlistPage';
 import { CheckoutPage } from './components/checkout/CheckoutPage';
 import { OrdersPage } from './components/orders/OrdersPage';
 import { TrackOrderPage } from './components/orders/TrackOrderPage';
+import { TermsPage } from './components/pages/TermsPage';
+import { PrivacyPage } from './components/pages/PrivacyPage';
+import { ContactUsPage } from './components/pages/ContactUsPage';
 import { AdminPage } from './components/admin/AdminPage';
 
 const MainLayout: React.FC = () => {
@@ -30,6 +36,7 @@ const MainLayout: React.FC = () => {
   if (currentPage === 'admin') {
     return (
       <>
+        <SEO />
         <AdminPage />
         <ToastContainer />
       </>
@@ -40,6 +47,8 @@ const MainLayout: React.FC = () => {
     switch (currentPage) {
       case 'home':
         return <HomePage />;
+      case 'categories':
+        return <CategoriesPage />;
       case 'shop':
         return <ShopPage />;
       case 'product-detail':
@@ -54,6 +63,12 @@ const MainLayout: React.FC = () => {
         return <OrdersPage />;
       case 'track-order':
         return <TrackOrderPage />;
+      case 'terms':
+        return <TermsPage />;
+      case 'privacy':
+        return <PrivacyPage />;
+      case 'contact':
+        return <ContactUsPage />;
       default:
         return <HomePage />;
     }
@@ -61,18 +76,19 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#fafaf9] text-slate-900 flex flex-col selection:bg-slate-950 selection:text-white font-sans">
+      <SEO />
       {/* Top Main Navigation Bar (Clean centered big search) */}
       <Navbar />
 
       {/* Dynamic Main Page Content */}
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full pb-16 md:pb-0">
         {renderPage()}
       </main>
 
       {/* Global Streamlined Footer */}
       <Footer />
 
-      {/* Mobile Sticky Floating Dock */}
+      {/* Mobile Bottom Touch Navigation */}
       <MobileDock />
 
       {/* Sidebar Cart Drawer */}
@@ -80,6 +96,9 @@ const MainLayout: React.FC = () => {
 
       {/* Quick View Product Modal */}
       <QuickViewModal />
+
+      {/* Login Modal */}
+      <LoginModal />
 
       {/* Notifications Container */}
       <ToastContainer />

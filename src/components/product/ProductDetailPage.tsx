@@ -12,6 +12,7 @@ import {
   ChevronRight, 
   Check, 
   MessageSquare, 
+  MessageCircle,
   Send,
   User,
   FileText,
@@ -21,7 +22,8 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   Flame,
-  Info
+  Info,
+  Maximize2
 } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -30,6 +32,7 @@ import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Separator } from '../ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { ImagePreviewModal } from '../common/ImagePreviewModal';
 
 export const ProductDetailPage: React.FC = () => {
   const { 
@@ -46,6 +49,7 @@ export const ProductDetailPage: React.FC = () => {
   const product = products.find(p => p.id === selectedProductId) || products[0];
 
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [selectedColor, setSelectedColor] = useState<{ name: string; hex: string } | undefined>(
     product?.colors && product.colors.length > 0 ? product.colors[0] : undefined
   );
@@ -53,13 +57,9 @@ export const ProductDetailPage: React.FC = () => {
     product?.sizes && product.sizes.length > 0 ? product.sizes[0] : undefined
   );
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<'description' | 'reviews' | 'write-review' | 'discussion'>('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'reviews' | 'discussion'>('description');
 
   // Review & Comment Form State
-  const [commentName, setCommentName] = useState('');
-  const [commentEmail, setCommentEmail] = useState('');
-  const [commentText, setCommentText] = useState('');
-  const [commentRating, setCommentRating] = useState(5);
   const [discussionQuestion, setDiscussionQuestion] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
@@ -87,25 +87,6 @@ export const ProductDetailPage: React.FC = () => {
   const handleBuyNow = () => {
     addToCart(product, quantity, selectedColor, selectedSize);
     navigateTo('checkout');
-  };
-
-  const handleSubmitReview = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-
-    setIsSubmittingComment(true);
-    addProductComment(product.id, {
-      userName: commentName.trim() || 'Verified Collector',
-      text: commentText.trim(),
-      rating: commentRating,
-    });
-
-    setCommentText('');
-    setCommentName('');
-    setCommentEmail('');
-    setIsSubmittingComment(false);
-    addToast('Review Submitted', 'Thank you for sharing your feedback with the community!', 'success');
-    setActiveTab('reviews');
   };
 
   const handlePostQuestion = (e: React.FormEvent) => {
@@ -140,12 +121,24 @@ export const ProductDetailPage: React.FC = () => {
           
           {/* Left: Gallery (5 cols) */}
           <div className="lg:col-span-5 space-y-3.5">
-            <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden bg-slate-50 border border-slate-100">
+            <div 
+              onClick={() => setIsPreviewOpen(true)}
+              className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 cursor-zoom-in group"
+              title="Click for full-screen image preview (drag or slide multiple photos)"
+            >
               <img
                 src={product.images[selectedImageIdx] || product.images[0]}
                 alt={product.name}
-                className="w-full h-full object-cover transition-all duration-300"
+                className="w-full h-full object-cover transition-all duration-300 group-hover:scale-102"
               />
+
+              {/* Zoom hint overlay on hover */}
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="bg-white/90 backdrop-text text-slate-900 px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Click to Preview</span>
+                </div>
+              </div>
 
               {/* Badges */}
               <div className="absolute top-3.5 left-3.5 flex flex-col gap-1.5 z-10">
@@ -211,10 +204,15 @@ export const ProductDetailPage: React.FC = () => {
                 </h1>
 
                 {/* Price Display */}
-                <div className="flex items-baseline gap-3 mt-3 font-mono">
+                <div className="flex items-baseline gap-3 mt-3 font-mono flex-wrap">
                   <span className="text-3xl font-black text-slate-950">
                     {formatCurrency(product.price)}
                   </span>
+                  {product.unit && (
+                    <span className="text-sm font-sans font-medium text-slate-500">
+                      / {product.unit}
+                    </span>
+                  )}
                   {product.originalPrice && product.originalPrice > product.price && (
                     <span className="text-base text-slate-400 line-through font-mono">
                       {formatCurrency(product.originalPrice)}
@@ -226,6 +224,34 @@ export const ProductDetailPage: React.FC = () => {
                     </Badge>
                   )}
                 </div>
+
+                {/* Status & Payment Method Badges */}
+                <div className="flex flex-wrap gap-1.5 mt-2.5">
+                  {product.productStatus === 'out_of_stock' || !product.inStock ? (
+                    <Badge className="bg-rose-500 text-white text-[10px] font-bold uppercase tracking-wider">
+                      Out of Stock
+                    </Badge>
+                  ) : product.productStatus === 'pre_order' ? (
+                    <Badge className="bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider">
+                      Pre-Order Available
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider">
+                      Ready to Ship
+                    </Badge>
+                  )}
+
+                  {product.allowCod !== false && (
+                    <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 text-[10px] font-semibold">
+                      ✓ Cash on Delivery Available
+                    </Badge>
+                  )}
+                  {product.allowOnlinePayment !== false && (
+                    <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 text-[10px] font-semibold">
+                      ✓ Instant Online Payment
+                    </Badge>
+                  )}
+                </div>
               </div>
 
               {/* Short Description */}
@@ -233,8 +259,8 @@ export const ProductDetailPage: React.FC = () => {
                 {product.description}
               </p>
 
-              {/* Colors */}
-              {product.colors && product.colors.length > 0 && (
+              {/* Colors (only if enabled) */}
+              {(product.enableColors ?? true) && product.colors && product.colors.length > 0 && (
                 <div>
                   <label className="text-[11px] font-bold text-slate-800 uppercase tracking-wider block mb-2">
                     Color: <span className="font-normal text-slate-600">{selectedColor?.name || product.colors[0].name}</span>
@@ -261,8 +287,8 @@ export const ProductDetailPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Sizes */}
-              {product.sizes && product.sizes.length > 0 && (
+              {/* Sizes (only if enabled) */}
+              {(product.enableSizes ?? true) && product.sizes && product.sizes.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-[11px] font-bold text-slate-800 uppercase tracking-wider">
@@ -312,14 +338,16 @@ export const ProductDetailPage: React.FC = () => {
                 </div>
 
                 <div className="text-xs font-semibold">
-                  {product.inStock ? (
-                    <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1 font-bold text-[11px]">
-                      <Check className="w-3.5 h-3.5" />
-                      In Stock ({product.stockQuantity} units)
+                  {product.productStatus === 'out_of_stock' || !product.inStock ? (
+                    <span className="text-rose-600 font-bold bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
+                      Out of Stock
                     </span>
-                  ) : (
-                    <span className="text-rose-600 font-bold">Out of Stock</span>
-                  )}
+                  ) : product.productStatus === 'pre_order' ? (
+                    <span className="text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full flex items-center gap-1 font-bold text-[11px]">
+                      <Check className="w-3.5 h-3.5" />
+                      Pre-Order ({product.stockQuantity} allocation units)
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -330,23 +358,42 @@ export const ProductDetailPage: React.FC = () => {
                     id="pdp-add-to-bag"
                     size="lg"
                     onClick={handleAddToCart}
-                    disabled={!product.inStock}
+                    disabled={product.productStatus === 'out_of_stock' || !product.inStock}
                     className="flex-1 rounded-2xl h-12 bg-slate-950 text-white hover:bg-slate-800 font-bold text-xs uppercase tracking-wider gap-2 shadow-xs"
                   >
                     <ShoppingBag className="w-4 h-4" />
-                    <span>Add to Shopping Bag</span>
+                    <span>
+                      {product.productStatus === 'out_of_stock' || !product.inStock
+                        ? 'Item Currently Sold Out'
+                        : product.productStatus === 'pre_order'
+                        ? 'Pre-Order to Shopping Bag'
+                        : 'Add to Shopping Bag'}
+                    </span>
                   </Button>
                 </div>
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => {
+                    const text = encodeURIComponent(`Product ID: ${product.id}\nLink: ${window.location.href}\nDetails: ${product.description}`);
+                    window.open(`https://wa.me/?text=${text}`, '_blank');
+                  }}
+                  className="w-full rounded-2xl h-12 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 font-bold text-xs uppercase tracking-wider gap-2 transition-colors shadow-xs"
+                >
+                  <MessageCircle className="w-4 h-4 text-green-600" />
+                  <span>Discuss this product with WhatsApp</span>
+                </Button>
 
                 <Button
                   id="pdp-instant-buy"
                   variant="outline"
                   size="lg"
                   onClick={handleBuyNow}
-                  disabled={!product.inStock}
+                  disabled={product.productStatus === 'out_of_stock' || !product.inStock}
                   className="w-full rounded-2xl h-12 border-slate-300 font-bold text-xs uppercase tracking-wider hover:bg-slate-900 hover:text-white transition-colors"
                 >
-                  Instant Direct Checkout
+                  {product.productStatus === 'pre_order' ? 'Direct Pre-Order Checkout' : 'Instant Direct Checkout'}
                 </Button>
               </div>
 
@@ -378,53 +425,41 @@ export const ProductDetailPage: React.FC = () => {
         <Card className="p-6 sm:p-10 bg-white rounded-3xl border-slate-200/80 shadow-xs mb-14">
           
           {/* Tab Navigation Header */}
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-4 overflow-x-auto no-scrollbar">
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-4">
             <button
               onClick={() => setActiveTab('description')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
                 activeTab === 'description'
                   ? 'bg-slate-950 text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>Full Description & Specs</span>
+              <span>Description</span>
             </button>
 
             <button
               onClick={() => setActiveTab('reviews')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
                 activeTab === 'reviews'
                   ? 'bg-slate-950 text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <Star className="w-3.5 h-3.5 fill-current" />
-              <span>Customer Reviews ({product.comments?.length || product.reviewCount})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('write-review')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
-                activeTab === 'write-review'
-                  ? 'bg-slate-950 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Write a Custom Review</span>
+              <span>Reviews ({product.comments?.length || product.reviewCount})</span>
             </button>
 
             <button
               onClick={() => setActiveTab('discussion')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
                 activeTab === 'discussion'
                   ? 'bg-slate-950 text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>Discussion & Questions</span>
+              <span>Discussion</span>
             </button>
           </div>
 
@@ -432,12 +467,16 @@ export const ProductDetailPage: React.FC = () => {
           {activeTab === 'description' && (
             <div className="pt-8 space-y-8 animate-in fade-in duration-200">
               <div className="max-w-3xl">
-                <h3 className="text-xl font-black text-slate-950 mb-3">
-                  Craftsmanship & Material Integrity
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  {product.detailedDescription || product.description}
-                </p>
+                {/<[a-z][\s\S]*>/i.test(product.detailedDescription || '') ? (
+                  <div 
+                    className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-600 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:mt-3 [&_h3]:mb-1.5 [&_p]:mb-2.5 [&_blockquote]:border-l-2 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3.5 [&_blockquote]:italic [&_blockquote]:text-slate-700"
+                    dangerouslySetInnerHTML={{ __html: product.detailedDescription || product.description }}
+                  />
+                ) : (
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                    {product.detailedDescription || product.description}
+                  </p>
+                )}
               </div>
 
               {/* Specifications Table */}
@@ -530,102 +569,9 @@ export const ProductDetailPage: React.FC = () => {
                 ) : (
                   <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-100">
                     <p className="text-xs text-slate-500">No customer reviews yet for this piece.</p>
-                    <Button
-                      size="sm"
-                      onClick={() => setActiveTab('write-review')}
-                      className="mt-3 rounded-full text-xs font-bold"
-                    >
-                      Write First Review
-                    </Button>
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Tab 3: Custom Review Form */}
-          {activeTab === 'write-review' && (
-            <div className="pt-8 max-w-2xl animate-in fade-in duration-200">
-              <h3 className="text-xl font-black text-slate-950 mb-1">
-                Share Your Customer Review
-              </h3>
-              <p className="text-xs text-slate-500 mb-6">
-                Tell the community about material handfeel, craftsmanship, sizing, and your overall experience.
-              </p>
-
-              <form onSubmit={handleSubmitReview} className="space-y-4">
-                {/* Rating selection */}
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                    Your Overall Rating
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <button
-                        key={star}
-                        type="button"
-                        onClick={() => setCommentRating(star)}
-                        className="p-1 hover:scale-115 transition-transform"
-                      >
-                        <Star className={`w-6 h-6 ${star <= commentRating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
-                      </button>
-                    ))}
-                    <span className="text-xs font-bold text-slate-800 ml-2">{commentRating}.0 Stars</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                      Your Full Name
-                    </label>
-                    <Input
-                      type="text"
-                      required
-                      value={commentName}
-                      onChange={e => setCommentName(e.target.value)}
-                      placeholder="e.g. Jordan Mitchell"
-                      className="bg-slate-50 rounded-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                      Email (Private)
-                    </label>
-                    <Input
-                      type="email"
-                      required
-                      value={commentEmail}
-                      onChange={e => setCommentEmail(e.target.value)}
-                      placeholder="jordan@example.com"
-                      className="bg-slate-50 rounded-xl"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                    Your Written Review
-                  </label>
-                  <textarea
-                    rows={4}
-                    required
-                    value={commentText}
-                    onChange={e => setCommentText(e.target.value)}
-                    placeholder="Describe how the piece looks in person, texture, weight, sizing..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 font-medium"
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={isSubmittingComment}
-                  className="rounded-2xl h-11 px-8 bg-slate-950 text-white font-bold text-xs uppercase tracking-wider hover:bg-slate-800"
-                >
-                  <Send className="w-3.5 h-3.5 mr-2" />
-                  <span>Publish Review</span>
-                </Button>
-              </form>
             </div>
           )}
 
@@ -690,8 +636,8 @@ export const ProductDetailPage: React.FC = () => {
               </Button>
             </div>
 
-            {/* Smaller product cards 5-6 in a line */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+            {/* Product cards 1 per line on mobile */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               {relatedProducts.map(rel => (
                 <Card
                   key={rel.id}
@@ -714,6 +660,14 @@ export const ProductDetailPage: React.FC = () => {
         )}
 
       </div>
+
+      <ImagePreviewModal
+        isOpen={isPreviewOpen}
+        images={product.images}
+        initialIndex={selectedImageIdx}
+        onClose={() => setIsPreviewOpen(false)}
+        productName={product.name}
+      />
     </div>
   );
 };

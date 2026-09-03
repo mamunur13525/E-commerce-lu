@@ -26,6 +26,8 @@ export interface ProductComment {
   }[];
 }
 
+export type ProductStatus = 'in_stock' | 'out_of_stock' | 'pre_order' | 'draft';
+
 export interface Product {
   id: string;
   name: string;
@@ -45,8 +47,14 @@ export interface Product {
   isBestSeller?: boolean;
   inStock: boolean;
   stockQuantity: number;
-  colors?: { name: string; hex: string }[];
+  enableSizes?: boolean;
   sizes?: string[];
+  enableColors?: boolean;
+  colors?: { name: string; hex: string }[];
+  productStatus?: ProductStatus;
+  unit?: string;
+  allowOnlinePayment?: boolean;
+  allowCod?: boolean;
   tags: string[];
   sku: string;
   materials?: string[];
@@ -89,6 +97,9 @@ export interface CartItem {
   category: string;
   sku: string;
   maxStock: number;
+  allowCod?: boolean;
+  allowOnlinePayment?: boolean;
+  product?: Product;
 }
 
 export interface UserAddress {
@@ -98,9 +109,11 @@ export interface UserAddress {
   street: string;
   apartment?: string;
   city: string;
+  upazila?: string;
   state: string;
   postalCode: string;
   country: string;
+  specialNote?: string;
   isDefault?: boolean;
 }
 
@@ -214,6 +227,40 @@ export interface Coupon {
   description?: string;
 }
 
+export interface ContactInfo {
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  country: string;
+  zip: string;
+  hours: string;
+  whatsapp?: string;
+  supportNote?: string;
+}
+
+export interface SocialLinks {
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+  youtube?: string;
+  tiktok?: string;
+  pinterest?: string;
+  linkedin?: string;
+}
+
+export interface PaymentSettings {
+  allowOnlinePayment: boolean;
+  allowCashOnDelivery: boolean;
+  codInstructions?: string;
+}
+
+export interface ImageKitConfig {
+  urlEndpoint: string;
+  publicKey: string;
+  privateKey?: string;
+}
+
 export interface StoreSettings {
   freeShippingThreshold: number;
   standardShippingRate: number;
@@ -223,11 +270,16 @@ export interface StoreSettings {
   promoCode: string;
   promoDiscountPercent: number;
   notificationEmail: string;
+  contactInfo: ContactInfo;
+  socialLinks: SocialLinks;
+  paymentSettings: PaymentSettings;
+  imagekitConfig?: ImageKitConfig;
 }
 
 export type PageType = 
   | 'home' 
   | 'shop' 
+  | 'categories'
   | 'product-detail' 
   | 'cart' 
   | 'checkout' 
@@ -235,6 +287,9 @@ export type PageType =
   | 'orders' 
   | 'order-detail' 
   | 'track-order' 
+  | 'contact'
+  | 'terms'
+  | 'privacy'
   | 'admin';
 
 export interface FilterState {

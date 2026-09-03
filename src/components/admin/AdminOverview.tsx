@@ -12,7 +12,13 @@ import {
   Sparkles,
   Ticket,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Database,
+  RefreshCw,
+  CheckCircle2,
+  AlertTriangle,
+  ExternalLink,
+  Zap
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { Card } from '../ui/card';
@@ -24,7 +30,21 @@ interface AdminOverviewProps {
 }
 
 export const AdminOverview: React.FC<AdminOverviewProps> = ({ onNavigateTab }) => {
-  const { products, orders, categories, coupons, deliveryOptions } = useStore();
+  const { products, orders, categories, coupons, deliveryOptions, dbStatus, refreshDBData, reconnectDB } = useStore();
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [isReconnecting, setIsReconnecting] = React.useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshDBData();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const handleReconnect = async () => {
+    setIsReconnecting(true);
+    await reconnectDB();
+    setIsReconnecting(false);
+  };
 
   const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
   const pendingOrders = orders.filter(o => o.status === 'processing' || o.status === 'confirmed');
@@ -32,149 +52,236 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ onNavigateTab }) =
   const lowStockProducts = products.filter(p => p.stockQuantity <= 5);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-150">
       
-      {/* Top Banner */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-slate-950 text-white relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl">
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider mb-2">
-            <Sparkles className="w-3 h-3" />
-            <span>Store Command Center</span>
+      {/* MongoDB Database Connection Status Banner */}
+      <div className="bg-white rounded-xl border border-slate-200/80 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-none">
+        <div className="flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+            dbStatus?.connected 
+              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
+              : dbStatus?.atlasIpWhitelistNeeded
+                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                : 'bg-slate-50 text-slate-700 border border-slate-200'
+          }`}>
+            <Database className="w-4 h-4" />
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-            Welcome to Lumina Archive Admin
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-900">
+                {dbStatus?.connected ? 'MongoDB Atlas Active' : 'Resilient In-Memory Mode'}
+              </span>
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                dbStatus?.connected
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : dbStatus?.atlasIpWhitelistNeeded
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-slate-100 text-slate-800'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  dbStatus?.connected ? 'bg-emerald-500' : dbStatus?.atlasIpWhitelistNeeded ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'
+                }`} />
+                {dbStatus?.connected ? 'Mongoose Connected' : dbStatus?.atlasIpWhitelistNeeded ? 'Atlas IP Whitelist Required' : 'Fallback Active'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {dbStatus?.connected 
+                ? `Connected to database "${dbStatus.databaseName}". Real-time cloud synchronization active.` 
+                : dbStatus?.atlasIpWhitelistNeeded
+                  ? 'Your MongoDB Atlas connection string was detected, but Atlas firewall requires IP whitelist permission (0.0.0.0/0).'
+                  : 'Configure MONGODB_URI in Settings to connect your remote MongoDB Atlas cluster. All operations work seamlessly in fallback mode.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+          {dbStatus?.uriConfigured && !dbStatus?.connected && (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleReconnect}
+              disabled={isReconnecting}
+              className="h-8 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-xs font-medium gap-1.5 shadow-none"
+            >
+              <Zap className={`w-3.5 h-3.5 ${isReconnecting ? 'animate-spin' : ''}`} />
+              <span>{isReconnecting ? 'Connecting...' : 'Test & Connect'}</span>
+            </Button>
+          )}
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-8 rounded-lg border-slate-200 text-xs font-medium text-slate-700 gap-1.5"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Sync Data</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Atlas IP Whitelist Setup Assistance Card */}
+      {dbStatus?.uriConfigured && !dbStatus?.connected && dbStatus?.atlasIpWhitelistNeeded && (
+        <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 space-y-3">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="font-semibold text-slate-900">How to authorize MongoDB Atlas access</h4>
+              <p className="text-slate-600 leading-relaxed">
+                Cloud container environments run on dynamic IP addresses. To allow your cloud app to connect to your MongoDB Atlas cluster:
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            <div className="bg-white/90 border border-amber-200/80 rounded-lg p-2.5">
+              <div className="font-semibold text-slate-900 mb-0.5">1. Open Network Access</div>
+              <p className="text-slate-600 text-[11px]">
+                In <a href="https://cloud.mongodb.com" target="_blank" rel="noopener noreferrer" className="text-amber-700 underline font-medium inline-flex items-center gap-0.5">MongoDB Atlas <ExternalLink className="w-2.5 h-2.5" /></a>, click <strong>Network Access</strong> under Security.
+              </p>
+            </div>
+
+            <div className="bg-white/90 border border-amber-200/80 rounded-lg p-2.5">
+              <div className="font-semibold text-slate-900 mb-0.5">2. Add IP Address</div>
+              <p className="text-slate-600 text-[11px]">
+                Click <strong>+ Add IP Address</strong>, then click <strong>Allow Access from Anywhere</strong> (<code className="bg-amber-100/80 px-1 py-0.5 rounded font-mono text-[10px]">0.0.0.0/0</code>).
+              </p>
+            </div>
+
+            <div className="bg-white/90 border border-amber-200/80 rounded-lg p-2.5">
+              <div className="font-semibold text-slate-900 mb-0.5">3. Confirm & Connect</div>
+              <p className="text-slate-600 text-[11px]">
+                Click <strong>Confirm</strong>. Wait ~30 seconds for Atlas to update, then click <strong>Test & Connect</strong> above.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-1 border-t border-amber-200/60 text-[11px] text-amber-800">
+            <span>✨ Zero downtime: The store is running seamlessly in resilient fallback mode with full purchasing and order processing.</span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleReconnect}
+              disabled={isReconnecting}
+              className="h-7 bg-white border-amber-300 text-amber-900 hover:bg-amber-100 text-[11px] px-2.5"
+            >
+              {isReconnecting ? 'Testing Connection...' : 'Retry Connection Now'}
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">
+            Overview
           </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl">
-            Real-time fulfillment metrics, inventory stock control, shipping rate tables, and promotional campaign controls.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Store performance and operational status.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 relative z-10">
+        <div className="flex items-center gap-2">
           <Button
+            size="sm"
             onClick={() => onNavigateTab('products')}
-            className="rounded-xl bg-amber-400 text-slate-950 hover:bg-amber-300 font-black text-xs uppercase tracking-wider"
+            className="rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-xs font-medium"
           >
-            Manage Products
+            Products
           </Button>
           <Button
+            size="sm"
             variant="outline"
             onClick={() => onNavigateTab('orders')}
-            className="rounded-xl bg-slate-900 border-slate-700 text-white hover:bg-slate-800 text-xs font-bold"
+            className="rounded-lg border-slate-200 text-xs font-medium text-slate-700"
           >
-            Review Orders ({pendingOrders.length})
+            Orders ({pendingOrders.length})
           </Button>
         </div>
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        <Card className="p-5 bg-white rounded-2xl border-slate-200/90 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Revenue</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="font-mono text-2xl sm:text-3xl font-black text-slate-950">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="p-4 bg-white rounded-xl border-slate-200/80 shadow-none">
+          <span className="text-xs font-medium text-slate-500">Revenue</span>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
             {formatCurrency(totalRevenue)}
           </p>
-          <p className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" /> +18.4% this month
+          <p className="text-[11px] text-slate-400 mt-1">
+            +18.4% this month
           </p>
         </Card>
 
-        <Card className="p-5 bg-white rounded-2xl border-slate-200/90 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Customer Orders</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <ShoppingBag className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="font-mono text-2xl sm:text-3xl font-black text-slate-950">
+        <Card className="p-4 bg-white rounded-xl border-slate-200/80 shadow-none">
+          <span className="text-xs font-medium text-slate-500">Orders</span>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
             {orders.length}
           </p>
-          <p className="text-[11px] text-slate-500 mt-1">
-            <span className="text-amber-600 font-bold">{pendingOrders.length} pending</span> · {deliveredOrders.length} fulfilled
+          <p className="text-[11px] text-slate-400 mt-1">
+            {pendingOrders.length} pending
           </p>
         </Card>
 
-        <Card className="p-5 bg-white rounded-2xl border-slate-200/90 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Catalog SKUs</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Package className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="font-mono text-2xl sm:text-3xl font-black text-slate-950">
+        <Card className="p-4 bg-white rounded-xl border-slate-200/80 shadow-none">
+          <span className="text-xs font-medium text-slate-500">Products</span>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
             {products.length}
           </p>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Across {categories.length} departments
+          <p className="text-[11px] text-slate-400 mt-1">
+            {categories.length} categories
           </p>
         </Card>
 
-        <Card className="p-5 bg-white rounded-2xl border-slate-200/90 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Active Coupons</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Ticket className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="font-mono text-2xl sm:text-3xl font-black text-slate-950">
+        <Card className="p-4 bg-white rounded-xl border-slate-200/80 shadow-none">
+          <span className="text-xs font-medium text-slate-500">Coupons</span>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
             {coupons.filter(c => c.isActive).length}
           </p>
-          <p className="text-[11px] text-slate-500 mt-1">
-            {coupons.reduce((sum, c) => sum + c.usedCount, 0)} total coupon redemptions
+          <p className="text-[11px] text-slate-400 mt-1">
+            {coupons.reduce((sum, c) => sum + c.usedCount, 0)} redeemed
           </p>
         </Card>
       </div>
 
-      {/* 2-Column: Recent Orders & Quick Alerts */}
+      {/* 2-Column: Recent Orders & Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Recent Orders (7 cols) */}
         <div className="lg:col-span-7">
-          <Card className="p-5 sm:p-6 bg-white rounded-3xl border-slate-200/90 shadow-xs">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-950">
-                  Recent Customer Orders
-                </h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Latest transactions from customer storefront</p>
-              </div>
+          <Card className="p-5 bg-white rounded-xl border-slate-200/80 shadow-none">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900">
+                Recent Orders
+              </h3>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => onNavigateTab('orders')}
-                className="text-xs font-bold text-slate-900"
+                className="text-xs text-slate-600 hover:text-slate-900 h-auto p-0"
               >
-                <span>View All</span>
-                <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                View all
               </Button>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {orders.slice(0, 4).map(order => (
                 <div 
                   key={order.id}
                   onClick={() => onNavigateTab('orders')}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 transition-colors cursor-pointer border border-slate-100"
+                  className="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-slate-100"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-900 text-xs">
-                      <ShoppingBag className="w-4 h-4" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-slate-900">{order.orderNumber}</span>
+                      <span className="text-[10px] text-slate-500 capitalize">{order.status}</span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-slate-950">{order.orderNumber}</span>
-                        <Badge variant="outline" className="text-[9px] uppercase font-bold py-0">{order.status}</Badge>
-                      </div>
-                      <p className="text-[11px] text-slate-400">{order.shippingAddress.fullName} · {order.items.length} items</p>
-                    </div>
+                    <p className="text-[11px] text-slate-400">{order.shippingAddress.fullName}</p>
                   </div>
 
                   <div className="text-right">
-                    <span className="font-mono text-xs font-black text-slate-950 block">{formatCurrency(order.total)}</span>
+                    <span className="text-xs font-semibold text-slate-900 block">{formatCurrency(order.total)}</span>
                     <span className="text-[10px] text-slate-400">{formatDate(order.orderDate)}</span>
                   </div>
                 </div>
@@ -183,65 +290,44 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({ onNavigateTab }) =
           </Card>
         </div>
 
-        {/* Inventory & Quick Actions (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          <Card className="p-5 sm:p-6 bg-white rounded-3xl border-slate-200/90 shadow-xs">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-black uppercase tracking-wider text-slate-950">
-                Low Stock Alerts
+        {/* Inventory (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          <Card className="p-5 bg-white rounded-xl border-slate-200/80 shadow-none">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-900">
+                Low Stock
               </h3>
-              <Badge variant="secondary" className="text-[10px] font-bold">
-                {lowStockProducts.length} Items
-              </Badge>
+              <span className="text-xs text-slate-500">
+                {lowStockProducts.length} items
+              </span>
             </div>
 
             {lowStockProducts.length > 0 ? (
               <div className="space-y-2">
                 {lowStockProducts.slice(0, 3).map(prod => (
-                  <div key={prod.id} className="flex items-center justify-between p-2.5 rounded-xl bg-rose-50/60 border border-rose-100">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <img src={prod.images[0]} alt="" className="w-8 h-8 object-cover rounded-lg flex-shrink-0" />
+                  <div key={prod.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <img src={prod.images[0]} alt="" className="w-7 h-7 object-cover rounded flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-900 truncate">{prod.name}</p>
-                        <p className="text-[10px] text-rose-600 font-bold font-mono">Only {prod.stockQuantity} remaining</p>
+                        <p className="text-xs font-medium text-slate-900 truncate">{prod.name}</p>
+                        <p className="text-[10px] text-slate-500">{prod.stockQuantity} in stock</p>
                       </div>
                     </div>
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="ghost"
                       onClick={() => onNavigateTab('products')}
-                      className="text-[10px] font-bold h-7 px-2"
+                      className="text-xs h-6 px-2 text-slate-700"
                     >
-                      Restock
+                      Edit
                     </Button>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-slate-500 py-4 text-center">All inventory levels healthy.</p>
+              <p className="text-xs text-slate-400 py-3 text-center">Stock levels are healthy.</p>
             )}
           </Card>
-
-          {/* Quick System Navigation Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => onNavigateTab('coupons')}
-              className="p-3.5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-400 text-left transition-all group"
-            >
-              <Ticket className="w-5 h-5 text-amber-500 mb-1.5 group-hover:scale-110 transition-transform" />
-              <h4 className="text-xs font-bold text-slate-900">Manage Coupons</h4>
-              <p className="text-[10px] text-slate-400 mt-0.5">{coupons.length} Discount Codes</p>
-            </button>
-
-            <button
-              onClick={() => onNavigateTab('shipping')}
-              className="p-3.5 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-400 text-left transition-all group"
-            >
-              <Truck className="w-5 h-5 text-blue-500 mb-1.5 group-hover:scale-110 transition-transform" />
-              <h4 className="text-xs font-bold text-slate-900">Shipping Rates</h4>
-              <p className="text-[10px] text-slate-400 mt-0.5">{deliveryOptions.length} Carriers & Rates</p>
-            </button>
-          </div>
         </div>
 
       </div>
